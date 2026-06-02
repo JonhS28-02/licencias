@@ -535,14 +535,54 @@ function hasData(values) {
   return values.some(v => { const s = String(v??'').trim(); return s && s!=='—' && !/^-{2,}/.test(s); });
 }
 function guessDias(row) {
-  const exact = valNames(row, ['# DIAS','# DÍAS','NO DIAS','NO DÍAS','NO. DIAS','NO. DÍAS','N° DIAS','N° DÍAS','NUMERO DE DIAS','NÚMERO DE DÍAS','DIAS','DÍAS','TOTAL DIAS','TOTAL DÍAS','DURACION','DURACIÓN']);
-  if (exact) return exact;
-  for (const [k,v] of Object.entries(row||{})) {
-    if (!v || String(v).trim()==='') continue;
-    const nk = norm(k);
-    if (nk.includes('DIAGNOST') || nk.includes('FECHA') || nk==='D' || nk==='D_2') continue;
-    if (nk.includes('DIA') || nk.includes('DURACION')) return String(v).trim();
+  if (!row) return '—';
+
+  const posibles = [
+    '# DIAS', '# DÍAS',
+    'NO DIAS', 'NO DÍAS',
+    'NO. DIAS', 'NO. DÍAS',
+    'N° DIAS', 'N° DÍAS',
+    'NUM DIAS', 'NUM DÍAS',
+    'NUM. DIAS', 'NUM. DÍAS',
+    'NUMERO DE DIAS', 'NÚMERO DE DÍAS',
+    'DIAS', 'DÍAS',
+    'DIA', 'DÍA',
+    'TOTAL DIAS', 'TOTAL DÍAS',
+    'DURACION', 'DURACIÓN',
+    'DÍAS OTORGADOS',
+    'DIAS OTORGADOS'
+  ];
+
+  const exact = valNames(row, posibles);
+  if (exact !== null && exact !== undefined && String(exact).trim() !== '') {
+    return String(exact).trim();
   }
+
+  for (const [k, v] of Object.entries(row)) {
+    if (v === null || v === undefined || String(v).trim() === '') continue;
+
+    const nk = norm(k);
+
+    if (
+      nk.includes('DIAGNOST') ||
+      nk.includes('FECHA') ||
+      nk.includes('RFC') ||
+      nk.includes('NOMBRE') ||
+      nk.includes('TARJETA')
+    ) {
+      continue;
+    }
+
+    if (
+      nk.includes('DIAS') ||
+      nk.includes('DIA') ||
+      nk.includes('DURACION') ||
+      nk.includes('DURACION')
+    ) {
+      return String(v).trim();
+    }
+  }
+
   return '—';
 }
 function guessTarjeta(row) {
