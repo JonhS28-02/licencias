@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control de Licencias — Hospital de la Mujer</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ── HEADER ──────────────────────────────────────── -->
+<header>
+  <div class="logo">HM</div>
+  <div class="hdr-txt">
+    <h1>Sistema de Control de Licencias y Facilidades</h1>
+    <p>Hospital de la Mujer · Consulta y reportes administrativos</p>
+  </div>
+  <div class="pills">
+    <div class="pill">Personas: <b id="sp">—</b></div>
+    <div class="pill">Registros: <b id="sr">—</b></div>
+    <div class="pill">Archivos: <b>4</b></div>
+    <button class="btn" onclick="openReporteFacilidadesAvanzado()">📊 Reportes avanzados</button>
+  </div>
+</header>
+
+<!-- ── LAYOUT ──────────────────────────────────────── -->
+<div class="layout">
+
+  <!-- PANEL IZQ -->
+  <div class="left">
+    <div class="sbox">
+      <div class="slbl">Buscar por RFC o nombre</div>
+      <div class="sw" id="sw">
+        <span class="s-ico">⌕</span>
+        <input type="text" class="si" id="si" placeholder="RFC completo o parte del nombre" autocomplete="off" spellcheck="false">
+        <button class="s-clr" id="sc">✕</button>
+        <div class="ac" id="ac"></div>
+      </div>
+    </div>
+    <div class="slist">
+      <div class="s-sec-lbl" id="sl">Recientes</div>
+      <div id="rl"></div>
+    </div>
+  </div>
+
+  <!-- PANEL DER -->
+  <div class="right">
+    <div class="loading" id="ld">
+      <div class="spinner"></div>
+      <span style="font-size:12px;color:var(--tx2)">Cargando datos…</span>
+    </div>
+    <div class="empty" id="em">
+      <div class="empty-ico">⚕</div>
+      <h2>Busca a una persona por RFC o nombre</h2>
+      <p>Escribe en el buscador de la izquierda</p>
+    </div>
+    <div class="rp" id="rp"></div>
+  </div>
+</div>
+
+<!-- ── LIBRERÍAS PDF ───────────────────────────────── -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+<script src="app.js"></script>
+</body>
+</html>
