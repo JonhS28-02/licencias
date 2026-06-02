@@ -860,7 +860,7 @@ const PDF = {
   text(doc, t, x, y, { size=8, bold=false, color, align, maxWidth } = {}) {
     doc.setFont('helvetica', bold ? 'bold' : 'normal');
     doc.setFontSize(size);
-    this.color(doc, color || this.text_);
+    this.color(doc, color || this.ink);
     const opt = {};
     if (align)    opt.align    = align;
     if (maxWidth) opt.maxWidth = maxWidth;
@@ -958,7 +958,7 @@ const PDF = {
     doc.autoTable({
       startY, head:[head], body, theme:'grid',
       margin, tableWidth: opt.tableWidth || 'auto',
-      styles: { font:'helvetica', fontSize:opt.fontSize||6.8, cellPadding:opt.cellPadding||2.2, overflow:'linebreak', valign:'middle', textColor:self.text, lineColor:self.border, lineWidth:.12, minCellHeight:5 },
+      styles: { font:'helvetica', fontSize:opt.fontSize||6.8, cellPadding:opt.cellPadding||2.2, overflow:'linebreak', valign:'middle', textColor:self.ink, lineColor:self.border, lineWidth:.12, minCellHeight:5 },
       headStyles: { fillColor: opt.headColor || self.navy, textColor:[255,255,255], fontStyle:'bold', halign:'center', valign:'middle' },
       alternateRowStyles: { fillColor:[249,251,253] },
       columnStyles: opt.columnStyles || {},
@@ -1025,7 +1025,7 @@ const PDF = {
   }
 };
 // fix self-reference
-PDF.text_ = PDF.text;
+
 
 /* ═══════════════════════════════════════════════════════════
    HELPERS DE EXTRACCIÓN DE DATOS
