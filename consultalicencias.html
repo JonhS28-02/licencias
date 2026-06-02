@@ -1,4 +1,4 @@
-<!DOCTYPE ht<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -6,642 +6,479 @@
 <title>Control de Licencias — Hospital de la Mujer</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
-/* ===== ESTILOS ORIGINALES (se mantienen) ===== */
-:root{--bg:#f4f6f8;--sur:#ffffff;--sur2:#eef2f6;--brd:#d8dee6;--acc:#1f5f8b;--acc2:#2f6f63;--acc3:#7a8694;--acc4:#1f5f8b;--warn:#7a8694;--tx:#1f2933;--tx2:#5f6b7a;--tx3:#9aa4b2;--soft:#f8fafc;--muted:#eef2f6}
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;overflow-x:hidden}
-header{background:var(--sur);border-bottom:1px solid var(--brd);padding:13px 24px;display:flex;align-items:center;gap:12px}
-.logo{width:32px;height:32px;background:var(--acc);border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:12px;color:#0d1117;flex-shrink:0}
-.hdr-txt h1{font-size:13px;font-weight:600;letter-spacing:.02em}
-.hdr-txt p{font-size:11px;color:var(--tx2);margin-top:1px}
-.pills{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
-.pill{background:var(--bg);border:1px solid var(--brd);border-radius:20px;padding:3px 10px;font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--tx2);white-space:nowrap}
-.pill b{color:var(--acc)}
-.layout{display:grid;grid-template-columns:320px 1fr;height:calc(100vh - 59px)}
-.left{border-right:1px solid var(--brd);display:flex;flex-direction:column;background:var(--sur)}
-.sbox{padding:13px;border-bottom:1px solid var(--brd)}
-.slbl{font-size:10px;color:var(--tx2);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
-.sw{position:relative}
-.si{width:100%;background:var(--bg);border:1px solid var(--brd);border-radius:7px;padding:8px 30px 8px 34px;color:var(--tx);font-size:12px;font-family:'IBM Plex Mono',monospace;outline:none;transition:border-color .2s;text-transform:uppercase}
-.si::placeholder{color:var(--tx3);text-transform:none;font-size:11px}
-.si:focus{border-color:var(--acc)}
-.s-ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--tx3);font-size:14px;pointer-events:none}
-.s-clr{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--tx3);cursor:pointer;font-size:13px;display:none;line-height:1}
-.s-clr:hover{color:var(--tx2)}
-.ac{background:var(--sur2);border:1px solid var(--brd);border-top:none;border-radius:0 0 7px 7px;max-height:260px;overflow-y:auto;display:none;position:absolute;width:100%;top:100%;left:0;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,.4)}
-.aci{padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--brd)}
-.aci:last-child{border-bottom:none}
-.aci:hover,.aci.act{background:var(--bg)}
-.aci-rfc{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--acc);font-weight:600;letter-spacing:.04em}
-.aci-nom{font-size:11px;color:var(--tx2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.aci-tags{display:flex;gap:3px;margin-top:3px;flex-wrap:wrap}
-.tag{font-size:9px;padding:1px 5px;border-radius:9px;font-family:'IBM Plex Mono',monospace;font-weight:600}
-.tag-c{background:rgba(0,217,163,.12);color:var(--acc);border:1px solid rgba(0,217,163,.2)}
-.tag-l{background:rgba(14,165,233,.12);color:var(--acc2);border:1px solid rgba(14,165,233,.2)}
-.tag-f{background:rgba(168,85,247,.12);color:var(--acc4);border:1px solid rgba(168,85,247,.2)}
-.slist{padding:10px 12px;flex:1;overflow-y:auto}
-.s-sec-lbl{font-size:9px;color:var(--tx3);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;padding:0 2px}
-.ri{padding:6px 8px;border-radius:5px;cursor:pointer;transition:background .1s;margin-bottom:1px;display:flex;align-items:center;gap:8px}
-.ri:hover{background:var(--sur2)}
-.ri.act{background:var(--sur2);border-left:2px solid var(--acc);padding-left:6px}
-.ri-rfc{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--acc);min-width:100px;flex-shrink:0}
-.ri-nom{font-size:10px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ri-dots{display:flex;gap:3px;margin-left:auto;flex-shrink:0}
-.rdot{width:5px;height:5px;border-radius:50%}
-.right{display:flex;flex-direction:column;overflow:hidden}
-.loading{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--tx2)}
-.spinner{width:28px;height:28px;border:2px solid var(--brd);border-top-color:var(--acc);border-radius:50%;animation:spin .7s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--tx3);display:none}
-.empty-ico{font-size:40px;opacity:.2}
-.empty h2{font-size:14px;font-weight:400;color:var(--tx3)}
-.empty p{font-size:11px}
-.rp{flex:1;overflow-y:auto;padding:20px;display:none}
-.rp.on{display:block}
-.ph{display:flex;align-items:flex-start;gap:16px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--brd)}
-.av{width:44px;height:44px;background:linear-gradient(135deg,var(--acc),var(--acc2));border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:16px;color:#0d1117;flex-shrink:0}
-.pi{flex:1;min-width:0}
-.pi-rfc{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--tx2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px}
-.pi-nom{font-size:18px;font-weight:600;line-height:1.2;margin-bottom:6px}
-.pi-chips{display:flex;gap:6px;flex-wrap:wrap}
-.chip{font-size:10px;padding:2px 8px;border-radius:11px;font-family:'IBM Plex Mono',monospace;font-weight:600}
-.chip-c{background:rgba(0,217,163,.12);color:var(--acc);border:1px solid rgba(0,217,163,.25)}
-.chip-l{background:rgba(14,165,233,.12);color:var(--acc2);border:1px solid rgba(14,165,233,.25)}
-.chip-f{background:rgba(168,85,247,.12);color:var(--acc4);border:1px solid rgba(168,85,247,.25)}
-.tot{margin-left:auto;text-align:right;flex-shrink:0}
-.tot-n{font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;color:var(--acc);line-height:1}
-.tot-l{font-size:10px;color:var(--tx2);margin-top:2px}
-.fsec{margin-bottom:20px}
-.fhdr{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:6px;cursor:pointer;user-select:none;transition:background .15s;margin-bottom:8px}
-.fhdr:hover{background:var(--sur2)}
-.fdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.src-c .fdot{background:var(--acc)}
-.src-l .fdot{background:var(--acc2)}
-.src-f .fdot{background:var(--acc4)}
-.fnam{font-size:12px;font-weight:600;flex:1}
-.src-c .fnam{color:var(--acc)}
-.src-l .fnam{color:var(--acc2)}
-.src-f .fnam{color:var(--acc4)}
-.fcnt{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--tx2)}
-.chev{font-size:10px;color:var(--tx3);transition:transform .2s}
-.fhdr.col .chev{transform:rotate(-90deg)}
-.fbody{display:block}
-.fbody.hid{display:none}
-.ssec{margin-bottom:8px;margin-left:16px}
-.sttl{font-size:10px;color:var(--tx2);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.05em;padding:5px 10px;background:var(--sur);border-radius:4px 4px 0 0;border:1px solid var(--brd);border-bottom:none;display:flex;justify-content:space-between;align-items:center}
-.sbdg{background:var(--bg);border:1px solid var(--brd);border-radius:9px;padding:1px 7px;font-size:9px;color:var(--tx2)}
-.tw{overflow-x:auto;border:1px solid var(--brd);border-radius:0 0 4px 4px}
-table{width:100%;border-collapse:collapse;font-size:11px}
-thead tr{background:var(--sur2);border-bottom:1px solid var(--brd)}
-th{padding:5px 10px;text-align:left;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--tx2);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;font-weight:400}
-td{padding:6px 10px;border-bottom:1px solid var(--brd);color:var(--tx);white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis}
-tr:last-child td{border-bottom:none}
-tbody tr:hover td{background:var(--sur2)}
-.nc{font-family:'IBM Plex Mono',monospace;color:var(--acc2);font-size:10px}
-.dc{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--warn)}
-.tc{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--acc);font-weight:600}
-.rn{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--tx3)}
-.fac-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;padding:10px;background:var(--sur);border:1px solid var(--brd);border-radius:0 0 4px 4px}
-.fac-info{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px;padding:10px;background:var(--sur);border:1px solid var(--brd);border-top:none;border-bottom:none}
-.fac-field{display:flex;flex-direction:column;gap:2px}
-.fac-key{font-size:9px;color:var(--tx3);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.06em}
-.fac-val{font-size:12px;color:var(--tx)}
-.fac-val.time{font-family:'IBM Plex Mono',monospace;color:var(--acc);font-weight:600}
-.mes-card{background:var(--bg);border:1px solid var(--brd);border-radius:6px;padding:8px 10px;border-left:3px solid var(--acc4)}
-.mes-nom{font-size:9px;color:var(--tx2);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
-.mes-val{font-size:11px;color:var(--acc4);font-weight:600;font-family:'IBM Plex Mono',monospace;word-break:break-all;white-space:normal;line-height:1.5}
-.day-chips{display:flex;flex-wrap:wrap;gap:3px;margin-top:2px}
-.day-chip{background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.3);border-radius:4px;padding:1px 5px;font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--acc4);font-weight:600}
-.day-range{background:rgba(168,85,247,.08);border:1px dashed rgba(168,85,247,.3);border-radius:4px;padding:1px 6px;font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--acc4)}
-.mes-card.empty-mes{border-left-color:var(--brd);opacity:.35}
-.mes-card.empty-mes .mes-val{color:var(--tx3)}
-::-webkit-scrollbar{width:5px;height:5px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--brd);border-radius:3px}
-::-webkit-scrollbar-thumb:hover{background:var(--tx3)}
+/* ── TOKENS ─────────────────────────────────────────── */
+:root {
+  --bg:       #f4f6f8;
+  --sur:      #ffffff;
+  --sur2:     #f1f5f9;
+  --brd:      #d8dee6;
+  --brd2:     #cfd7e2;
+  --acc:      #1f5f8b;
+  --acc-dk:   #16486d;
+  --acc2:     #2f6f63;
+  --acc3:     #7a8694;
+  --tx:       #1f2933;
+  --tx2:      #5f6b7a;
+  --tx3:      #9aa4b2;
+  --soft:     #f8fafc;
+  --amber:    #a06f20;
+  --warn:     #7a8694;
+  --radius:   12px;
+  --shadow:   0 2px 12px rgba(31,41,51,.07);
+  --shadow-lg:0 6px 24px rgba(31,41,51,.10);
+}
 
-/* ===== REPORTES AVANZADOS ===== */
-.adv-wrap{display:flex;flex-direction:column;gap:14px}
-.adv-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:14px;border:1px solid var(--brd);border-radius:12px;background:linear-gradient(135deg,rgba(168,85,247,.12),rgba(14,165,233,.08));}
-.adv-title h2{font-size:18px;margin-bottom:4px}
-.adv-title p{font-size:11px;color:var(--tx2);line-height:1.4}
-.adv-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
-.adv-btn{background:#1f5f8b;border:none;color:#fff;border-radius:8px;padding:8px 10px;font-size:10px;font-family:'IBM Plex Mono',monospace;font-weight:600;cursor:pointer}
-.adv-btn.secondary{background:var(--sur2);color:var(--tx);border-color:var(--brd)}
-.adv-filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;padding:12px;border:1px solid var(--brd);border-radius:10px;background:var(--sur)}
-.adv-field{display:flex;flex-direction:column;gap:5px}
-.adv-field label{font-size:9px;color:var(--tx2);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.07em}
-.adv-field select,.adv-field input{background:var(--bg);border:1px solid var(--brd);border-radius:7px;color:var(--tx);font-size:11px;padding:8px;outline:none;min-width:0}
-.adv-field select:focus,.adv-field input:focus{border-color:var(--acc4)}
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
-.kpi{background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:12px;position:relative;overflow:hidden}
-.kpi:before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--acc4)}
-.kpi-num{font-family:'IBM Plex Mono',monospace;font-size:23px;font-weight:600;color:var(--acc4);line-height:1}
-.kpi-lbl{font-size:10px;color:var(--tx2);margin-top:5px;text-transform:uppercase;letter-spacing:.04em}
-.kpi-sub{font-size:10px;color:var(--tx3);margin-top:4px}
-.adv-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:12px}
-@media(max-width:1000px){.adv-grid{grid-template-columns:1fr}.adv-head{flex-direction:column}.adv-actions{justify-content:flex-start}}
-.adv-card{background:var(--sur);border:1px solid var(--brd);border-radius:10px;overflow:hidden}
-.adv-card-h{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--brd);background:var(--sur2)}
-.adv-card-h h3{font-size:12px;color:var(--tx);font-weight:600}
-.adv-card-h span{font-size:10px;color:var(--tx2);font-family:'IBM Plex Mono',monospace}
-.bar-list{padding:10px 12px;display:flex;flex-direction:column;gap:9px}
-.bar-row{display:grid;grid-template-columns:minmax(130px,1fr) 1.8fr 58px;gap:8px;align-items:center}
-.bar-name{font-size:10px;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bar-track{height:8px;background:var(--bg);border:1px solid var(--brd);border-radius:20px;overflow:hidden}
-.bar-fill{height:100%;background:linear-gradient(90deg,var(--acc4),var(--acc2));border-radius:20px}
-.bar-val{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--tx2);text-align:right}
-.adv-table-wrap{max-height:420px;overflow:auto;border-top:1px solid var(--brd)}
-.adv-note{font-size:10px;color:var(--tx2);padding:10px 12px;line-height:1.4;border-top:1px solid var(--brd)}
-.empty-adv{padding:30px;text-align:center;color:var(--tx3);font-size:12px}
+/* ── RESET ──────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'IBM Plex Sans', sans-serif;
+  background: var(--bg);
+  color: var(--tx);
+  min-height: 100vh;
+  overflow-x: hidden;
+  font-size: 14px;
+}
+button { cursor: pointer; font-family: inherit; }
 
+/* ── SCROLLBAR ──────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--brd2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--tx3); }
+* { scrollbar-width: thin; scrollbar-color: var(--brd2) transparent; }
 
-/* ===== DISEÑO LIMPIO Y ACCESIBLE ===== */
-*{scrollbar-width:thin}
-body{
-  background:#f4f6f8;
-  color:var(--tx);
-  font-size:15px;
-}
-header{
-  background:#ffffff;
-  border-bottom:1px solid var(--brd);
-  padding:16px 24px;
-  box-shadow:0 2px 10px rgba(31,41,51,.06);
-}
-.logo{
-  width:42px;
-  height:42px;
-  border-radius:12px;
-  background:#1f5f8b;
-  color:#fff;
-  font-size:14px;
-  box-shadow:none;
-}
-.hdr-txt h1{
-  color:#1f2933;
-  font-size:17px;
-  letter-spacing:0;
-}
-.hdr-txt p{
-  color:#667383;
-  font-size:12px;
-  margin-top:3px;
-}
-.pills{
-  gap:8px;
-}
-.pill{
-  background:#f8fafc;
-  border:1px solid #d8dee6;
-  color:#5f6b7a;
-  font-size:11px;
-  padding:6px 12px;
-}
-.pill b{
-  color:#1f5f8b;
-}
-.pills button{
-  background:#1f5f8b !important;
-  border:none !important;
-  color:#fff !important;
-  padding:7px 13px !important;
-  border-radius:8px !important;
-  font-size:11px !important;
-  box-shadow:none !important;
-}
-.layout{
-  grid-template-columns:340px 1fr;
-  height:calc(100vh - 75px);
-  background:#f4f6f8;
-}
-.left{
-  background:#ffffff;
-  border-right:1px solid var(--brd);
-}
-.sbox{
-  padding:18px;
-  background:#ffffff;
-}
-.slbl{
-  color:#5f6b7a;
-  font-size:11px;
-  letter-spacing:.04em;
-}
-.si{
-  background:#ffffff;
-  border:1px solid #cfd7e2;
-  color:#1f2933;
-  border-radius:10px;
-  padding:11px 36px 11px 38px;
-  font-size:13px;
-}
-.si:focus{
-  border-color:#1f5f8b;
-  box-shadow:0 0 0 3px rgba(31,95,139,.12);
-}
-.s-ico{color:#7a8694}
-.s-clr{color:#7a8694}
-.ac{
-  background:#ffffff;
-  border:1px solid #d8dee6;
-  box-shadow:0 10px 25px rgba(31,41,51,.12);
-  border-radius:0 0 10px 10px;
-}
-.aci{
-  padding:11px 13px;
-}
-.aci:hover,.aci.act{
-  background:#eef5fa;
-}
-.aci-rfc,.ri-rfc{
-  color:#1f5f8b;
-  font-size:11px;
-}
-.aci-nom,.ri-nom{
-  color:#5f6b7a;
-  font-size:11px;
-}
-.slist{
-  padding:14px;
-}
-.s-sec-lbl{
-  color:#7a8694;
-  font-size:10px;
-}
-.ri{
-  padding:9px 10px;
-  border-radius:9px;
-  margin-bottom:4px;
-}
-.ri:hover{
-  background:#f1f5f9;
-}
-.ri.act{
-  background:#eef5fa;
-  border-left:4px solid #1f5f8b;
-  padding-left:8px;
-}
-.right{
-  background:#f4f6f8;
-}
-.rp{
-  padding:24px;
-}
-.empty{
-  color:#7a8694;
-}
-.empty h2{
-  color:#5f6b7a;
-  font-size:18px;
-}
-.empty p{
-  font-size:13px;
-}
-.loading{
-  color:#5f6b7a;
-}
-.spinner{
-  border-color:#d8dee6;
-  border-top-color:#1f5f8b;
-}
-.ph{
-  background:#ffffff;
-  border:1px solid #d8dee6;
-  border-radius:16px;
-  padding:20px;
-  margin-bottom:22px;
-  box-shadow:0 4px 16px rgba(31,41,51,.06);
-}
-.av{
-  background:#1f5f8b;
-  color:#fff;
-  border-radius:12px;
-}
-.pi-rfc{
-  color:#667383;
-  font-size:11px;
-}
-.pi-nom{
-  color:#1f2933;
-  font-size:21px;
-}
-.chip,.tag{
-  border-radius:999px;
-  font-size:10px;
-  padding:3px 9px;
-}
-.chip-c,.tag-c,
-.chip-l,.tag-l,
-.chip-f,.tag-f{
-  background:#eef2f6;
-  color:#425466;
-  border:1px solid #d8dee6;
-}
-.tot-n{
-  color:#1f5f8b;
-  font-size:30px;
-}
-.tot-l{
-  color:#667383;
-  font-size:11px;
-}
-.tot button{
-  background:#1f5f8b !important;
-  color:#fff !important;
-  border:none !important;
-  border-radius:9px !important;
-  padding:9px 13px !important;
-  font-size:12px !important;
-  box-shadow:none !important;
-}
-.fsec{
-  background:#ffffff;
-  border:1px solid #d8dee6;
-  border-radius:16px;
-  padding:6px 10px 14px;
-  box-shadow:0 3px 12px rgba(31,41,51,.04);
-}
-.fhdr{
-  padding:13px 12px;
-  border-radius:12px;
-  margin-bottom:10px;
-}
-.fhdr:hover{
-  background:#f1f5f9;
-}
-.fdot{
-  width:10px;
-  height:10px;
-}
-.src-c .fdot,
-.src-l .fdot,
-.src-f .fdot{
-  background:#1f5f8b;
-}
-.src-c .fnam,
-.src-l .fnam,
-.src-f .fnam{
-  color:#1f2933;
-}
-.fnam{
-  font-size:14px;
-}
-.fcnt{
-  color:#667383;
-  font-size:11px;
-}
-.ssec{
-  margin-left:0;
-  margin-bottom:12px;
-}
-.sttl{
-  background:#eef2f6;
-  color:#425466;
-  padding:9px 12px;
-  font-size:11px;
-  border-color:#d8dee6;
-}
-.sbdg{
-  background:#ffffff;
-  color:#5f6b7a;
-  border-color:#d8dee6;
-}
-.tw{
-  border-color:#d8dee6;
-  border-radius:0 0 10px 10px;
-  background:#ffffff;
-}
-table{
-  font-size:12px;
-}
-thead tr{
-  background:#eef2f6;
-}
-th{
-  color:#425466;
-  font-size:10px;
-  padding:9px 11px;
-}
-td{
-  color:#1f2933;
-  border-bottom:1px solid #edf1f5;
-  padding:9px 11px;
-}
-tbody tr:hover td{
-  background:#f8fafc;
-}
-.nc,.dc,.tc{
-  color:#1f5f8b;
-  font-weight:600;
-}
-.rn{
-  color:#7a8694;
-}
-.fac-info{
-  background:#ffffff;
-  border-color:#d8dee6;
-  padding:12px;
-}
-.fac-grid{
-  background:#ffffff;
-  border-color:#d8dee6;
-  gap:10px;
-  padding:12px;
-}
-.fac-key{
-  color:#7a8694;
-  font-size:10px;
-}
-.fac-val{
-  color:#1f2933;
-  font-size:13px;
-}
-.fac-val.time{
-  color:#1f5f8b;
-}
-.mes-card{
-  background:#f8fafc;
-  border:1px solid #d8dee6;
-  border-left:4px solid #1f5f8b;
-  border-radius:10px;
-  padding:11px 12px;
-}
-.mes-nom{
-  color:#5f6b7a;
-  font-size:10px;
-}
-.mes-val{
-  color:#1f5f8b;
-}
-.day-chip,.day-range{
-  background:#ffffff;
-  border:1px solid #cfd7e2;
-  color:#1f5f8b;
-  font-size:11px;
-  padding:3px 7px;
-}
-.mes-card.empty-mes{
-  opacity:.5;
-  border-left-color:#cfd7e2;
-}
-.adv-wrap{
-  gap:18px;
-}
-.adv-head{
-  background:#ffffff;
-  border:1px solid #d8dee6;
-  border-radius:18px;
-  padding:20px;
-  box-shadow:0 4px 16px rgba(31,41,51,.06);
-}
-.adv-title h2{
-  color:#1f2933;
-  font-size:22px;
-  margin-bottom:6px;
-}
-.adv-title p{
-  color:#5f6b7a;
-  font-size:13px;
-}
-.adv-actions{
-  gap:10px;
-}
-.adv-btn{
-  background:#1f5f8b;
-  border:none;
-  color:#fff;
-  border-radius:10px;
-  padding:10px 13px;
-  font-size:11px;
-  box-shadow:none;
-}
-.adv-btn.secondary{
-  background:#ffffff;
-  color:#1f5f8b;
-  border:1px solid #cfd7e2;
-}
-.adv-filters{
-  background:#ffffff;
-  border:1px solid #d8dee6;
-  border-radius:16px;
-  padding:16px;
-  gap:13px;
-  box-shadow:0 3px 12px rgba(31,41,51,.04);
-}
-.adv-field label{
-  color:#5f6b7a;
-  font-size:10px;
-}
-.adv-field select,.adv-field input{
-  background:#ffffff;
-  border:1px solid #cfd7e2;
-  border-radius:10px;
-  color:#1f2933;
-  font-size:13px;
-  padding:10px;
-}
-.adv-field select:focus,.adv-field input:focus{
-  border-color:#1f5f8b;
-  box-shadow:0 0 0 3px rgba(31,95,139,.12);
-}
-.kpi-grid{
-  gap:13px;
-}
-.kpi{
-  background:#ffffff;
-  border:1px solid #d8dee6;
-  border-radius:16px;
-  padding:18px;
-  box-shadow:0 3px 12px rgba(31,41,51,.04);
-}
-.kpi:before{
-  width:5px;
-  background:#1f5f8b;
-}
-.kpi-num{
-  color:#1f5f8b;
-  font-size:30px;
-}
-.kpi-lbl{
-  color:#425466;
-  font-size:11px;
-}
-.kpi-sub{
-  color:#7a8694;
-  font-size:11px;
-}
-.adv-grid{
-  gap:16px;
-}
-.adv-card{
-  background:#ffffff;
-  border:1px solid #d8dee6;
-  border-radius:16px;
-  box-shadow:0 3px 12px rgba(31,41,51,.04);
-}
-.adv-card-h{
-  background:#f8fafc;
-  border-bottom:1px solid #d8dee6;
-  padding:14px 16px;
-}
-.adv-card-h h3{
-  color:#1f2933;
-  font-size:14px;
-}
-.adv-card-h span{
-  color:#667383;
-}
-.bar-list{
-  padding:16px;
-  gap:12px;
-}
-.bar-row{
-  grid-template-columns:minmax(150px,1fr) 1.7fr 70px;
-}
-.bar-name{
-  color:#1f2933;
-  font-size:12px;
-}
-.bar-track{
-  height:10px;
-  background:#eef2f6;
-  border:1px solid #d8dee6;
-}
-.bar-fill{
-  background:#1f5f8b;
-}
-.bar-val{
-  color:#5f6b7a;
-  font-size:11px;
-}
-.adv-table-wrap{
-  max-height:460px;
-}
-.adv-note{
-  color:#667383;
-  background:#f8fafc;
-  font-size:11px;
-}
-.empty-adv{
-  color:#7a8694;
-  font-size:13px;
-}
-button:hover,.adv-btn:hover{
-  opacity:.92;
-  transform:none;
-  box-shadow:none;
-}
-::-webkit-scrollbar-thumb{
-  background:#cfd7e2;
-}
-::-webkit-scrollbar-thumb:hover{
-  background:#aeb9c6;
-}
+/* ── HEADER ─────────────────────────────────────────── */
+header {
+  background: var(--sur);
+  border-bottom: 1px solid var(--brd);
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--shadow);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+.logo {
+  width: 40px; height: 40px;
+  background: var(--acc);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 600; font-size: 12px;
+  color: #fff;
+  flex-shrink: 0;
+}
+.hdr-txt h1 { font-size: 15px; font-weight: 600; color: var(--tx); }
+.hdr-txt p  { font-size: 11px; color: var(--tx2); margin-top: 2px; }
+
+.pills { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.pill {
+  background: var(--soft);
+  border: 1px solid var(--brd);
+  border-radius: 20px;
+  padding: 5px 11px;
+  font-size: 11px;
+  font-family: 'IBM Plex Mono', monospace;
+  color: var(--tx2);
+  white-space: nowrap;
+}
+.pill b { color: var(--acc); }
+
+/* ── BTN BASE ───────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--acc);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 11px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 600;
+  transition: background .15s, transform .1s;
+  white-space: nowrap;
+}
+.btn:hover  { background: var(--acc-dk); }
+.btn:active { transform: scale(.98); }
+.btn.sec {
+  background: var(--soft);
+  color: var(--acc);
+  border: 1px solid var(--brd2);
+}
+.btn.sec:hover { background: var(--sur2); }
+
+/* ── LAYOUT ─────────────────────────────────────────── */
+.layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  height: calc(100vh - 68px);
+}
+.left {
+  border-right: 1px solid var(--brd);
+  display: flex;
+  flex-direction: column;
+  background: var(--sur);
+  overflow: hidden;
+}
+.right {
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── BUSCADOR ───────────────────────────────────────── */
+.sbox {
+  padding: 14px;
+  border-bottom: 1px solid var(--brd);
+  background: var(--sur);
+}
+.slbl {
+  font-size: 10px;
+  color: var(--tx2);
+  font-family: 'IBM Plex Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: 6px;
+}
+.sw { position: relative; }
+.si {
+  width: 100%;
+  background: var(--bg);
+  border: 1.5px solid var(--brd);
+  border-radius: 9px;
+  padding: 10px 32px 10px 36px;
+  color: var(--tx);
+  font-size: 12px;
+  font-family: 'IBM Plex Mono', monospace;
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+  text-transform: uppercase;
+}
+.si::placeholder { color: var(--tx3); text-transform: none; }
+.si:focus {
+  border-color: var(--acc);
+  box-shadow: 0 0 0 3px rgba(31,95,139,.12);
+  background: var(--sur);
+}
+.s-ico {
+  position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+  color: var(--tx3); font-size: 15px; pointer-events: none;
+}
+.s-clr {
+  position: absolute; right: 9px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; color: var(--tx3);
+  font-size: 13px; line-height: 1; display: none;
+}
+.s-clr:hover { color: var(--tx2); }
+
+/* AUTOCOMPLETE */
+.ac {
+  position: absolute; width: 100%; top: calc(100% + 4px); left: 0; z-index: 200;
+  background: var(--sur);
+  border: 1px solid var(--brd);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg);
+  max-height: 280px;
+  overflow-y: auto;
+  display: none;
+}
+.aci { padding: 10px 13px; cursor: pointer; border-bottom: 1px solid var(--brd); }
+.aci:last-child { border-bottom: none; }
+.aci:hover, .aci.act { background: var(--sur2); }
+.aci-rfc  { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--acc); font-weight: 600; }
+.aci-nom  { font-size: 11px; color: var(--tx2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.aci-tags { display: flex; gap: 3px; margin-top: 4px; flex-wrap: wrap; }
+
+/* ── LISTA LATERAL ──────────────────────────────────── */
+.slist { padding: 12px; flex: 1; overflow-y: auto; }
+.s-sec-lbl {
+  font-size: 9px; color: var(--tx3);
+  font-family: 'IBM Plex Mono', monospace;
+  text-transform: uppercase; letter-spacing: .1em;
+  margin-bottom: 6px; padding: 0 2px;
+}
+.ri {
+  padding: 8px 10px; border-radius: 8px; cursor: pointer;
+  transition: background .1s; margin-bottom: 3px;
+  display: flex; align-items: center; gap: 8px;
+}
+.ri:hover { background: var(--sur2); }
+.ri.act   { background: #eef5fa; border-left: 3px solid var(--acc); padding-left: 7px; }
+.ri-rfc   { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--acc); min-width: 96px; flex-shrink: 0; }
+.ri-nom   { font-size: 10px; color: var(--tx2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ri-dots  { display: flex; gap: 3px; margin-left: auto; flex-shrink: 0; }
+.rdot     { width: 6px; height: 6px; border-radius: 50%; background: var(--acc); }
+
+/* ── TAGS / CHIPS ───────────────────────────────────── */
+.tag, .chip {
+  font-size: 9px; padding: 2px 7px;
+  border-radius: 99px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 600;
+  background: var(--sur2); color: var(--tx2); border: 1px solid var(--brd);
+}
+
+/* ── ESTADO PANEL DERECHO ───────────────────────────── */
+.loading {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 10px; color: var(--tx2);
+}
+.spinner {
+  width: 28px; height: 28px;
+  border: 2px solid var(--brd);
+  border-top-color: var(--acc);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.empty {
+  flex: 1; display: none; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 8px; color: var(--tx3);
+}
+.empty-ico { font-size: 42px; opacity: .18; }
+.empty h2  { font-size: 16px; font-weight: 400; color: var(--tx2); }
+.empty p   { font-size: 12px; }
+
+/* ── PANEL REPORTE ──────────────────────────────────── */
+.rp { flex: 1; overflow-y: auto; padding: 22px; display: none; }
+.rp.on { display: block; }
+
+/* FICHA PERSONA */
+.ph {
+  background: var(--sur);
+  border: 1px solid var(--brd);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow);
+  display: flex; align-items: flex-start; gap: 16px;
+}
+.av {
+  width: 46px; height: 46px;
+  background: var(--acc);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 600; font-size: 16px; color: #fff;
+  flex-shrink: 0;
+}
+.pi { flex: 1; min-width: 0; }
+.pi-rfc { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--tx2); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 3px; }
+.pi-nom { font-size: 20px; font-weight: 600; line-height: 1.2; margin-bottom: 7px; }
+.pi-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.tot { margin-left: auto; text-align: right; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.tot-n { font-family: 'IBM Plex Mono', monospace; font-size: 28px; font-weight: 600; color: var(--acc); line-height: 1; }
+.tot-l { font-size: 10px; color: var(--tx2); }
+
+/* SECCIONES FUENTE */
+.fsec {
+  background: var(--sur);
+  border: 1px solid var(--brd);
+  border-radius: 14px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.fhdr {
+  display: flex; align-items: center; gap: 9px;
+  padding: 13px 14px; cursor: pointer; user-select: none;
+  transition: background .15s;
+  border-bottom: 1px solid var(--brd);
+}
+.fhdr:hover { background: var(--sur2); }
+.fhdr.col   { border-bottom-color: transparent; }
+.fdot { width: 9px; height: 9px; border-radius: 50%; background: var(--acc); flex-shrink: 0; }
+.fnam { font-size: 13px; font-weight: 600; color: var(--tx); flex: 1; }
+.fcnt { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--tx2); }
+.chev { font-size: 10px; color: var(--tx3); transition: transform .2s; }
+.fhdr.col .chev { transform: rotate(-90deg); }
+
+.fbody { display: block; }
+.fbody.hid { display: none; }
+
+/* SUB-SECCIÓN HOJA */
+.ssec { margin: 0 14px 14px; }
+.ssec:first-child { margin-top: 14px; }
+.sttl {
+  font-size: 10px; color: var(--tx2);
+  font-family: 'IBM Plex Mono', monospace;
+  text-transform: uppercase; letter-spacing: .05em;
+  padding: 7px 12px;
+  background: var(--sur2);
+  border-radius: 8px 8px 0 0;
+  border: 1px solid var(--brd);
+  border-bottom: none;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.sbdg {
+  background: var(--sur); border: 1px solid var(--brd);
+  border-radius: 9px; padding: 1px 7px;
+  font-size: 9px; color: var(--tx2);
+}
+
+/* TABLA GENÉRICA */
+.tw {
+  overflow-x: auto;
+  border: 1px solid var(--brd);
+  border-radius: 0 0 8px 8px;
+  background: var(--sur);
+}
+table { width: 100%; border-collapse: collapse; font-size: 11px; }
+thead tr { background: var(--sur2); border-bottom: 1px solid var(--brd); }
+th {
+  padding: 7px 11px; text-align: left;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px; color: var(--tx2);
+  text-transform: uppercase; letter-spacing: .05em;
+  white-space: nowrap; font-weight: 400;
+}
+td {
+  padding: 7px 11px;
+  border-bottom: 1px solid #edf1f5;
+  color: var(--tx); white-space: nowrap;
+  max-width: 220px; overflow: hidden; text-overflow: ellipsis;
+}
+tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: var(--soft); }
+.nc  { font-family: 'IBM Plex Mono', monospace; color: var(--acc2); font-size: 10px; }
+.dc  { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--tx2); }
+.tc  { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--acc); font-weight: 600; }
+.rn  { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--tx3); }
+
+/* FACILIDADES GRID */
+.fac-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px; padding: 12px 14px;
+  background: var(--soft);
+  border: 1px solid var(--brd);
+  border-top: none;
+}
+.fac-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 8px; padding: 12px 14px;
+  background: var(--sur);
+  border: 1px solid var(--brd);
+  border-radius: 0 0 8px 8px;
+}
+.fac-field { display: flex; flex-direction: column; gap: 2px; }
+.fac-key   { font-size: 9px; color: var(--tx3); font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; letter-spacing: .06em; }
+.fac-val   { font-size: 12px; color: var(--tx); }
+.fac-val.time { font-family: 'IBM Plex Mono', monospace; color: var(--acc); font-weight: 600; }
+
+/* CARDS MES */
+.mes-card {
+  background: var(--soft);
+  border: 1px solid var(--brd);
+  border-radius: 8px; padding: 9px 10px;
+  border-left: 3px solid var(--acc);
+}
+.mes-card.empty-mes { opacity: .4; border-left-color: var(--brd2); }
+.mes-nom { font-size: 9px; color: var(--tx2); font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+.mes-val { font-size: 11px; color: var(--acc); font-weight: 600; font-family: 'IBM Plex Mono', monospace; }
+.day-chips  { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 2px; }
+.day-chip   { background: #eef5fa; border: 1px solid var(--brd2); border-radius: 4px; padding: 2px 6px; font-size: 10px; font-family: 'IBM Plex Mono', monospace; color: var(--acc); font-weight: 600; }
+.day-range  { background: #f0f8f6; border: 1px dashed var(--brd2); border-radius: 4px; padding: 2px 6px; font-size: 10px; font-family: 'IBM Plex Mono', monospace; color: var(--acc2); }
+
+/* ── REPORTES AVANZADOS ─────────────────────────────── */
+.adv-wrap  { display: flex; flex-direction: column; gap: 16px; }
+.adv-head  {
+  background: var(--sur); border: 1px solid var(--brd);
+  border-radius: 16px; padding: 20px;
+  box-shadow: var(--shadow);
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 14px;
+}
+.adv-title h2 { font-size: 20px; margin-bottom: 5px; }
+.adv-title p  { font-size: 12px; color: var(--tx2); line-height: 1.5; }
+.adv-actions  { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; align-items: flex-start; }
+
+.adv-filters {
+  background: var(--sur); border: 1px solid var(--brd);
+  border-radius: 14px; padding: 16px;
+  box-shadow: var(--shadow);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+.adv-field { display: flex; flex-direction: column; gap: 5px; }
+.adv-field label {
+  font-size: 9px; color: var(--tx2);
+  font-family: 'IBM Plex Mono', monospace;
+  text-transform: uppercase; letter-spacing: .07em;
+}
+.adv-field select,
+.adv-field input {
+  background: var(--soft); border: 1.5px solid var(--brd);
+  border-radius: 8px; color: var(--tx);
+  font-size: 12px; padding: 9px 10px; outline: none;
+  transition: border-color .2s, box-shadow .2s;
+  min-width: 0;
+}
+.adv-field select:focus,
+.adv-field input:focus {
+  border-color: var(--acc);
+  box-shadow: 0 0 0 3px rgba(31,95,139,.12);
+}
+
+/* KPIs */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 12px; }
+.kpi {
+  background: var(--sur); border: 1px solid var(--brd);
+  border-radius: 14px; padding: 16px;
+  position: relative; overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.kpi::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 4px; background: var(--acc);
+}
+.kpi-num { font-family: 'IBM Plex Mono', monospace; font-size: 28px; font-weight: 600; color: var(--acc); line-height: 1; }
+.kpi-lbl { font-size: 10px; color: var(--tx2); margin-top: 5px; text-transform: uppercase; letter-spacing: .04em; }
+.kpi-sub { font-size: 10px; color: var(--tx3); margin-top: 3px; }
+
+/* GRID DOS COLS */
+.adv-grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 14px; }
+@media (max-width: 1060px) { .adv-grid { grid-template-columns: 1fr; } .adv-head { flex-direction: column; } .adv-actions { justify-content: flex-start; } }
+
+/* CARD GRÁFICA */
+.adv-card {
+  background: var(--sur); border: 1px solid var(--brd);
+  border-radius: 14px; overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.adv-card-h {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; border-bottom: 1px solid var(--brd);
+  background: var(--soft);
+}
+.adv-card-h h3 { font-size: 12px; font-weight: 600; color: var(--tx); }
+.adv-card-h span { font-size: 10px; color: var(--tx2); font-family: 'IBM Plex Mono', monospace; }
+
+/* BAR LIST */
+.bar-list { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.bar-row  { display: grid; grid-template-columns: minmax(140px, 1fr) 1.8fr 64px; gap: 8px; align-items: center; }
+.bar-name { font-size: 11px; color: var(--tx); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar-track { height: 8px; background: var(--sur2); border: 1px solid var(--brd); border-radius: 20px; overflow: hidden; }
+.bar-fill  { height: 100%; background: var(--acc); border-radius: 20px; }
+.bar-val   { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--tx2); text-align: right; }
+
+/* TABLA AVANZADA */
+.adv-table-wrap { max-height: 460px; overflow: auto; }
+.adv-note { font-size: 10px; color: var(--tx2); padding: 10px 14px; line-height: 1.5; border-top: 1px solid var(--brd); background: var(--soft); }
+.empty-adv { padding: 32px; text-align: center; color: var(--tx3); font-size: 12px; }
 
 </style>
 </head>
 <body>
+
+<!-- ── HEADER ──────────────────────────────────────── -->
 <header>
   <div class="logo">HM</div>
   <div class="hdr-txt">
@@ -652,21 +489,14 @@ button:hover,.adv-btn:hover{
     <div class="pill">Personas: <b id="sp">—</b></div>
     <div class="pill">Registros: <b id="sr">—</b></div>
     <div class="pill">Archivos: <b>4</b></div>
-    <button onclick="openReporteFacilidadesAvanzado()" style="
-      background:#1f5f8b;
-      border:none;
-      color:#fff;
-      padding:5px 10px;
-      border-radius:20px;
-      cursor:pointer;
-      font-size:10px;
-      font-family:'IBM Plex Mono',monospace;
-      font-weight:600;
-    ">Reportes avanzados</button>
+    <button class="btn" onclick="openReporteFacilidadesAvanzado()">📊 Reportes avanzados</button>
   </div>
 </header>
 
+<!-- ── LAYOUT ──────────────────────────────────────── -->
 <div class="layout">
+
+  <!-- PANEL IZQ -->
   <div class="left">
     <div class="sbox">
       <div class="slbl">Buscar por RFC o nombre</div>
@@ -683,10 +513,11 @@ button:hover,.adv-btn:hover{
     </div>
   </div>
 
+  <!-- PANEL DER -->
   <div class="right">
     <div class="loading" id="ld">
       <div class="spinner"></div>
-      <span style="font-size:12px">Cargando datos...</span>
+      <span style="font-size:12px;color:var(--tx2)">Cargando datos…</span>
     </div>
     <div class="empty" id="em">
       <div class="empty-ico">⚕</div>
@@ -696,1256 +527,793 @@ button:hover,.adv-btn:hover{
     <div class="rp" id="rp"></div>
   </div>
 </div>
+
+<!-- ── LIBRERÍAS PDF ───────────────────────────────── -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-<script>
-let DB=null,hist=[],cur=null,acItems=[],acIdx=-1;
 
-// ── FORMATEO ─────────────────────────────────────────────────────────────────
-function isExcelTime(s){return typeof s==='string'&&s.startsWith('1899-12-30T');}
-function isISODate(s){return typeof s==='string'&&/^\d{4}-\d{2}-\d{2}T/.test(s)&&!s.startsWith('1899');}
+<script>
+'use strict';
+
+/* ═══════════════════════════════════════════════════════════
+   ESTADO GLOBAL
+═══════════════════════════════════════════════════════════ */
+let DB = null, hist = [], cur = null, acItems = [], acIdx = -1;
+
+/* ═══════════════════════════════════════════════════════════
+   UTILIDADES GENERALES
+═══════════════════════════════════════════════════════════ */
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function pad(d) { return String(parseInt(d, 10)).padStart(2, '0'); }
+function isExcelTime(s) { return typeof s === 'string' && s.startsWith('1899-12-30T'); }
+function isISODate(s)   { return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(s) && !s.startsWith('1899'); }
+
 function fmtTime(s) {
-  if (typeof s === 'string' && s.includes('T')) {
-    const dateObj = new Date(s);
-    const hh = String(dateObj.getHours()).padStart(2, '0');
-    const mm = String(dateObj.getMinutes()).padStart(2, '0');
-    if (isNaN(dateObj.getTime())) return s; 
-    return `${hh}:${mm}`;
-  }
+  const d = new Date(s);
+  if (isNaN(d)) return s;
+  return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+function fmtDate(s) {
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : s;
+}
+function fmtCell(key, val) {
+  if (val === null || val === undefined || val === '') return '—';
+  const s = String(val).trim();
+  if (!s) return '—';
+  if (isExcelTime(s)) return fmtTime(s);
+  if (isISODate(s))   return fmtDate(s);
   return s;
 }
-function fmtDate(s){
-  const m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  return m?m[3]+'/'+m[2]+'/'+m[1]:s;
+function cellClass(key, val) {
+  const s  = String(val ?? '').trim();
+  const kl = key.toLowerCase();
+  if (isExcelTime(s) || kl === 'entrada' || kl === 'salida') return 'tc';
+  if (isISODate(s) || /^\d{2}\/\d{2}\/\d{4}$/.test(s) || kl.includes('fecha')) return 'dc';
+  if (s && !isNaN(s) && /^\d+(\.\d+)?$/.test(s)) return 'nc';
+  return '';
 }
-function fmtFacilidad(v){
-  if(!v)return'';
-  let s=String(v).trim();
-  if(!s||s==='.'||s==='}'||/^\s+$/.test(s))return'';
-  if(isISODate(s))return`<span class="day-chip">${fmtDate(s)}</span>`;
-  s=s.replace(/\\/g,'/').replace(/,\s*$/,'').trim();
-  const yrMatch=s.match(/\/(\d{4})$/);
-  if(!yrMatch)return`<span class="day-chip">${esc(s)}</span>`;
-  const yr=yrMatch[1];
-  const rest=s.slice(0,s.length-5);
-  const mmMatch=rest.match(/\/(\d{2})$/);
-  if(!mmMatch)return`<span class="day-chip">${esc(s)}</span>`;
-  const mm=mmMatch[1];
-  const daysPart=rest.slice(0,rest.length-3);
-  return parseDayPart(daysPart,mm,yr);
+function getIni(n) {
+  if (!n) return '?';
+  const p = n.replace(/[,\/]/g,' ').split(/\s+/).filter(Boolean);
+  return p.length >= 2 ? (p[0][0] + p[1][0]).toUpperCase() : n[0].toUpperCase();
 }
-function parseDayPart(part,mm,yr){
-  if(!part)return`<span class="day-chip">${mm}/${yr}</span>`;
-  const tokens=part.split('/').map(t=>t.trim()).filter(Boolean);
-  let chips='';
-  for(const t of tokens){
-    if(t.includes('-')){
-      const parts=t.split('-').map(x=>x.trim()).filter(Boolean);
-      if(parts.length===2&&parseInt(parts[1])>parseInt(parts[0])){
-        chips+=`<span class="day-range">${pad(parts[0])}–${pad(parts[1])}/${mm}/${yr}</span>`;
-      } else {
-        parts.forEach(d=>chips+=`<span class="day-chip">${pad(d)}/${mm}/${yr}</span>`);
-      }
-    } else if(t.includes(',')){
-      t.split(',').forEach(d=>chips+=`<span class="day-chip">${pad(d.trim())}/${mm}/${yr}</span>`);
+
+/* ── FACILIDADES ── */
+function fmtFacilidad(v) {
+  if (!v) return '';
+  let s = String(v).trim();
+  if (!s || s === '.' || s === '}' || /^\s+$/.test(s)) return '';
+  if (isISODate(s)) return `<span class="day-chip">${esc(fmtDate(s))}</span>`;
+  s = s.replace(/\\/g, '/').replace(/,\s*$/, '').trim();
+  const yrMatch = s.match(/\/(\d{4})$/);
+  if (!yrMatch) return `<span class="day-chip">${esc(s)}</span>`;
+  const yr = yrMatch[1];
+  const rest = s.slice(0, s.length - 5);
+  const mmMatch = rest.match(/\/(\d{2})$/);
+  if (!mmMatch) return `<span class="day-chip">${esc(s)}</span>`;
+  const mm = mmMatch[1];
+  const daysPart = rest.slice(0, rest.length - 3);
+  return parseDayPart(daysPart, mm, yr);
+}
+function parseDayPart(part, mm, yr) {
+  if (!part) return `<span class="day-chip">${mm}/${yr}</span>`;
+  const tokens = part.split('/').map(t => t.trim()).filter(Boolean);
+  let chips = '';
+  for (const t of tokens) {
+    if (t.includes('-')) {
+      const [a, b] = t.split('-').map(x => x.trim()).filter(Boolean);
+      if (a && b && parseInt(b) > parseInt(a)) chips += `<span class="day-range">${pad(a)}–${pad(b)}/${mm}/${yr}</span>`;
+      else { if(a) chips += `<span class="day-chip">${pad(a)}/${mm}/${yr}</span>`; if(b) chips += `<span class="day-chip">${pad(b)}/${mm}/${yr}</span>`; }
+    } else if (t.includes(',')) {
+      t.split(',').forEach(d => chips += `<span class="day-chip">${pad(d.trim())}/${mm}/${yr}</span>`);
     } else {
-      chips+=`<span class="day-chip">${pad(t)}/${mm}/${yr}</span>`;
+      chips += `<span class="day-chip">${pad(t)}/${mm}/${yr}</span>`;
     }
   }
-  return chips||`<span class="day-chip">${esc(part)}/${mm}/${yr}</span>`;
+  return chips || `<span class="day-chip">${esc(part)}/${mm}/${yr}</span>`;
 }
-function pad(d){return String(parseInt(d,10)).padStart(2,'0');}
-function fmtCell(key,val){
-  if(val===null||val===undefined||val==='')return'—';
-  const s=String(val).trim();
-  if(!s)return'—';
-  const kl=key.toLowerCase();
-  if(isExcelTime(s))return fmtTime(s);
-  if(isISODate(s))return fmtDate(s);
-  return s;
-}
-function ccc(key,val){
-  const s=String(val||'').trim();
-  const kl=key.toLowerCase();
-  if(isExcelTime(s)||kl==='entrada'||kl==='salida')return'tc';
-  if(isISODate(s)||/^\d{2}\/\d{2}\/\d{4}$/.test(s)||kl.includes('fecha'))return'dc';
-  if(s&&!isNaN(s)&&/^\d+(\.\d+)?$/.test(s))return'nc';
-  return'';
-}
-// ── NOMBRES DE FUENTES ────────────────────────────────────────────────────────
-function srcLabel(n){
-  if(n.includes('2023')||n.includes('Control'))return'CTR 23-24';
-  if(n.includes('2025')||n.includes('LCGS'))return'LCGS 25';
-  return'FAC 26';
-}
-function srcClass(n){
-  if(n.includes('2023')||n.includes('Control'))return'src-c';
-  if(n.includes('2025')||n.includes('LCGS'))return'src-l';
-  return'src-f';
-}
-function srcColor(n){
-  if(n.includes('2023')||n.includes('Control'))return'var(--acc)';
-  if(n.includes('2025')||n.includes('LCGS'))return'var(--acc2)';
-  return'var(--acc4)';
-}
-function chipClass(n){
-  if(n.includes('2023')||n.includes('Control'))return'chip-c';
-  if(n.includes('2025')||n.includes('LCGS'))return'chip-l';
-  return'chip-f';
-}
-function tagClass(n){
-  if(n.includes('2023')||n.includes('Control'))return'tag-c';
-  if(n.includes('2025')||n.includes('LCGS'))return'tag-l';
-  return'tag-f';
-}
-function srcDisplayName(n){
-  if(n.includes('Facilidad'))return'Facilidades Administrativas 2026';
-  if(n.includes('LCGS')||n.includes('2025'))return'Licencias con Goce de Sueldo';
-  if(n.includes('2023')||n.includes('Control')||n.includes('Licencia'))return'Licencias Médicas';
+
+/* ═══════════════════════════════════════════════════════════
+   METADATOS DE FUENTE
+═══════════════════════════════════════════════════════════ */
+function srcDisplayName(n) {
+  if (n.includes('Facilidad'))  return 'Facilidades Administrativas 2026';
+  if (n.includes('LCGS') || n.includes('2025')) return 'Licencias con Goce de Sueldo';
+  if (n.includes('2023') || n.includes('Control') || n.includes('Licencia')) return 'Licencias Médicas';
   return n;
 }
-// ── DATOS ─────────────────────────────────────────────────────────────────────
-async function loadData(){
-  try{
-    const r=await fetch('./data.json?t='+Date.now());
-    if(!r.ok)throw new Error('No se pudo cargar data.json');
-    DB=await r.json();
-    let tr=0;
-    Object.values(DB).forEach(p=>Object.values(p.fuentes).forEach(s=>Object.values(s).forEach(r=>tr+=r.length)));
-    document.getElementById('sp').textContent=Object.keys(DB).length.toLocaleString('es-MX');
-    document.getElementById('sr').textContent=tr.toLocaleString('es-MX');
-    document.getElementById('ld').style.display='none';
-    document.getElementById('em').style.display='flex';
+function srcColor(n) {
+  if (n.includes('2023') || n.includes('Control')) return 'var(--acc)';
+  if (n.includes('LCGS') || n.includes('2025'))   return 'var(--acc2)';
+  return 'var(--amber)';
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CARGA DE DATOS
+═══════════════════════════════════════════════════════════ */
+async function loadData() {
+  try {
+    const r = await fetch('./data.json?t=' + Date.now());
+    if (!r.ok) throw new Error('No se pudo cargar data.json');
+    DB = await r.json();
+    let tr = 0;
+    Object.values(DB).forEach(p => Object.values(p.fuentes).forEach(s => Object.values(s).forEach(rr => tr += rr.length)));
+    document.getElementById('sp').textContent = Object.keys(DB).length.toLocaleString('es-MX');
+    document.getElementById('sr').textContent = tr.toLocaleString('es-MX');
+    document.getElementById('ld').style.display = 'none';
+    document.getElementById('em').style.display = 'flex';
     setupSearch();
-  }catch(e){
-    document.getElementById('ld').innerHTML='<span style="color:#f87171;font-size:12px">Error: '+e.message+'</span>';
+  } catch(e) {
+    document.getElementById('ld').innerHTML = `<span style="color:#e05252;font-size:12px">Error: ${e.message}</span>`;
     console.error(e);
   }
 }
-// ── BÚSQUEDA ──────────────────────────────────────────────────────────────────
-function setupSearch(){
-  const inp=document.getElementById('si'),ac=document.getElementById('ac'),sc=document.getElementById('sc');
-  inp.addEventListener('input',()=>{
-    const q=inp.value.trim().toUpperCase();
-    sc.style.display=q?'block':'none';
-    if(q.length<2){hideAC();return;}
-    const res=searchDB(q,14);
-    if(!res.length){hideAC();return;}
-    acItems=res;acIdx=-1;
-    ac.innerHTML=res.map((p,i)=>`<div class="aci" data-rfc="${p.rfc}" data-i="${i}">
-      <div class="aci-rfc">${hl(p.rfc,q)}</div>
-      <div class="aci-nom">${hl(p.nombre||'(sin nombre)',q)}</div>
-      <div class="aci-tags">${Object.keys(p.fuentes).map(s=>`<span class="tag ${tagClass(s)}">${srcLabel(s)}</span>`).join('')}</div>
-    </div>`).join('');
-    ac.querySelectorAll('.aci').forEach(el=>el.addEventListener('mousedown',e=>{
-      e.preventDefault();pick(el.dataset.rfc);inp.value='';sc.style.display='none';
+
+/* ═══════════════════════════════════════════════════════════
+   BÚSQUEDA
+═══════════════════════════════════════════════════════════ */
+function setupSearch() {
+  const inp = document.getElementById('si');
+  const ac  = document.getElementById('ac');
+  const sc  = document.getElementById('sc');
+
+  inp.addEventListener('input', () => {
+    const q = inp.value.trim().toUpperCase();
+    sc.style.display = q ? 'block' : 'none';
+    if (q.length < 2) { hideAC(); return; }
+    const res = searchDB(q, 14);
+    if (!res.length) { hideAC(); return; }
+    acItems = res; acIdx = -1;
+    ac.innerHTML = res.map((p, i) => `
+      <div class="aci" data-rfc="${esc(p.rfc)}" data-i="${i}">
+        <div class="aci-rfc">${hl(p.rfc, q)}</div>
+        <div class="aci-nom">${hl(p.nombre || '(sin nombre)', q)}</div>
+        <div class="aci-tags">${Object.keys(p.fuentes).map(s => `<span class="tag">${srcDisplayName(s).split(' ')[0]}</span>`).join('')}</div>
+      </div>`).join('');
+    ac.querySelectorAll('.aci').forEach(el => el.addEventListener('mousedown', e => {
+      e.preventDefault(); pick(el.dataset.rfc);
+      inp.value = ''; sc.style.display = 'none';
     }));
-    ac.style.display='block';
+    ac.style.display = 'block';
   });
-  inp.addEventListener('keydown',e=>{
-    if(!acItems.length)return;
-    const els=ac.querySelectorAll('.aci');
-    if(e.key==='ArrowDown'){e.preventDefault();acIdx=Math.min(acIdx+1,els.length-1);els.forEach((el,i)=>el.classList.toggle('act',i===acIdx));}
-    else if(e.key==='ArrowUp'){e.preventDefault();acIdx=Math.max(acIdx-1,-1);els.forEach((el,i)=>el.classList.toggle('act',i===acIdx));}
-    else if(e.key==='Enter'){e.preventDefault();const t=acIdx>=0?acItems[acIdx]:acItems[0];if(t){pick(t.rfc);inp.value='';sc.style.display='none';}}
-    else if(e.key==='Escape')hideAC();
+
+  inp.addEventListener('keydown', e => {
+    if (!acItems.length) return;
+    const els = ac.querySelectorAll('.aci');
+    if (e.key === 'ArrowDown') { e.preventDefault(); acIdx = Math.min(acIdx + 1, els.length - 1); els.forEach((el, i) => el.classList.toggle('act', i === acIdx)); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); acIdx = Math.max(acIdx - 1, -1); els.forEach((el, i) => el.classList.toggle('act', i === acIdx)); }
+    else if (e.key === 'Enter') { e.preventDefault(); const t = acIdx >= 0 ? acItems[acIdx] : acItems[0]; if(t) { pick(t.rfc); inp.value = ''; sc.style.display = 'none'; } }
+    else if (e.key === 'Escape') hideAC();
   });
-  sc.addEventListener('click',()=>{inp.value='';sc.style.display='none';hideAC();inp.focus();});
-  document.addEventListener('click',e=>{if(!e.target.closest('#sw'))hideAC();});
+
+  sc.addEventListener('click', () => { inp.value = ''; sc.style.display = 'none'; hideAC(); inp.focus(); });
+  document.addEventListener('click', e => { if (!e.target.closest('#sw')) hideAC(); });
 }
-function hideAC(){document.getElementById('ac').style.display='none';acItems=[];acIdx=-1;}
-function searchDB(q,lim){
-  const res=[];
-  for(const[rfc,d]of Object.entries(DB)){
-    if(res.length>=lim)break;
-    if(rfc.includes(q)||(d.nombre&&d.nombre.toUpperCase().includes(q)))res.push(d);
+
+function hideAC() { document.getElementById('ac').style.display = 'none'; acItems = []; acIdx = -1; }
+
+function searchDB(q, lim) {
+  const res = [];
+  for (const [rfc, d] of Object.entries(DB)) {
+    if (res.length >= lim) break;
+    if (rfc.includes(q) || (d.nombre && d.nombre.toUpperCase().includes(q))) res.push(d);
   }
-  res.sort((a,b)=>(a.rfc.startsWith(q)?0:1)-(b.rfc.startsWith(q)?0:1));
-  return res.slice(0,lim);
+  res.sort((a, b) => (a.rfc.startsWith(q) ? 0 : 1) - (b.rfc.startsWith(q) ? 0 : 1));
+  return res.slice(0, lim);
 }
-function hl(t,q){
-  if(!t)return t;
-  const i=t.toUpperCase().indexOf(q);if(i<0)return t;
-  return t.slice(0,i)+'<mark style="background:rgba(0,217,163,.2);color:var(--acc);border-radius:2px">'+t.slice(i,i+q.length)+'</mark>'+t.slice(i+q.length);
+
+function hl(t, q) {
+  if (!t) return t;
+  const i = t.toUpperCase().indexOf(q); if (i < 0) return esc(t);
+  return esc(t.slice(0,i)) + `<mark style="background:rgba(31,95,139,.15);color:var(--acc);border-radius:2px">${esc(t.slice(i, i + q.length))}</mark>` + esc(t.slice(i + q.length));
 }
-// ── SELECCIÓN ─────────────────────────────────────────────────────────────────
-function pick(rfc){
+
+/* ═══════════════════════════════════════════════════════════
+   SELECCIÓN
+═══════════════════════════════════════════════════════════ */
+function pick(rfc) {
   hideAC();
-  const p=DB[rfc];if(!p)return;
-  cur=rfc;
-  const ei=hist.indexOf(rfc);if(ei!==-1)hist.splice(ei,1);
-  hist.unshift(rfc);if(hist.length>25)hist.pop();
-  renderSide();renderPerson(p);
+  const p = DB[rfc]; if (!p) return;
+  cur = rfc;
+  const ei = hist.indexOf(rfc); if (ei !== -1) hist.splice(ei, 1);
+  hist.unshift(rfc); if (hist.length > 25) hist.pop();
+  renderSide();
+  renderPerson(p);
 }
-function renderSide(){
-  document.getElementById('rl').innerHTML=hist.map(r=>{
-    const p=DB[r];if(!p)return'';
-    const dots=Object.keys(p.fuentes).map(s=>`<div class="rdot" style="background:${srcColor(s)}"></div>`).join('');
-    return`<div class="ri ${r===cur?'act':''}" onclick="pick('${r}')">
-      <span class="ri-rfc">${r}</span>
-      <span class="ri-nom">${p.nombre||'—'}</span>
+
+function renderSide() {
+  document.getElementById('rl').innerHTML = hist.map(r => {
+    const p = DB[r]; if (!p) return '';
+    const dots = Object.keys(p.fuentes).map(s => `<div class="rdot" style="background:${srcColor(s)}"></div>`).join('');
+    return `<div class="ri ${r === cur ? 'act' : ''}" onclick="pick('${esc(r)}')">
+      <span class="ri-rfc">${esc(r)}</span>
+      <span class="ri-nom">${esc(p.nombre || '—')}</span>
       <div class="ri-dots">${dots}</div>
     </div>`;
   }).join('');
 }
-// ── RENDER PERSONA (MUESTRA TODAS LAS COLUMNAS SIN FILTRAR, EXCEPTO EMPTY) ───
-function renderPerson(p){
-  let totalR=0;
-  Object.values(p.fuentes).forEach(s=>Object.values(s).forEach(r=>totalR+=r.length));
 
-  let h=`<div class="ph">
-    <div class="av">${getIni(p.nombre)}</div>
+/* ═══════════════════════════════════════════════════════════
+   RENDER PERSONA
+═══════════════════════════════════════════════════════════ */
+function renderPerson(p) {
+  const MESES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+  let totalR = 0;
+  Object.values(p.fuentes).forEach(s => Object.values(s).forEach(rr => totalR += rr.length));
+
+  let h = `<div class="ph">
+    <div class="av">${esc(getIni(p.nombre))}</div>
     <div class="pi">
-      <div class="pi-rfc">RFC: ${p.rfc}</div>
-      <div class="pi-nom">${p.nombre||'(Sin nombre registrado)'}</div>
-      <div class="pi-chips">${Object.keys(p.fuentes).map(s=>`<span class="chip ${chipClass(s)}">${srcDisplayName(s)}</span>`).join('')}</div>
+      <div class="pi-rfc">RFC: ${esc(p.rfc)}</div>
+      <div class="pi-nom">${esc(p.nombre || '(Sin nombre registrado)')}</div>
+      <div class="pi-chips">${Object.keys(p.fuentes).map(s => `<span class="chip">${esc(srcDisplayName(s))}</span>`).join('')}</div>
     </div>
     <div class="tot">
-  <div class="tot-n">${totalR}</div>
-  <div class="tot-l">registros totales</div>
-  <button onclick="genPDF()" style="
-    margin-top:10px;
-    background:var(--acc);
-    border:none;
-    color:#000;
-    padding:7px 12px;
-    border-radius:6px;
-    cursor:pointer;
-    font-weight:600;
-    font-size:11px;
-  ">
-    Descargar PDF
-  </button>
-</div>
+      <div class="tot-n">${totalR}</div>
+      <div class="tot-l">registros totales</div>
+      <button class="btn" onclick="genPDF()" style="margin-top:4px">⬇ Descargar PDF</button>
+    </div>
   </div>`;
 
-  for(const[sname,sheets]of Object.entries(p.fuentes)){
-    const st=Object.values(sheets).reduce((a,r)=>a+r.length,0);
-    const cls=srcClass(sname);
-    const displayName=srcDisplayName(sname);
+  for (const [sname, sheets] of Object.entries(p.fuentes)) {
+    const st = Object.values(sheets).reduce((a, rr) => a + rr.length, 0);
+    const displayName = srcDisplayName(sname);
+    const isFac = sname.includes('Facilidad');
 
-    h+=`<div class="fsec"><div class="fhdr ${cls}" onclick="toggleF(this)">
-      <div class="fdot"></div><div class="fnam">${displayName}</div>
-      <div class="fcnt">${st} registro${st!==1?'s':''}</div><span class="chev">▾</span>
-    </div><div class="fbody">`;
+    h += `<div class="fsec">
+      <div class="fhdr" onclick="toggleF(this)">
+        <div class="fdot" style="background:${srcColor(sname)}"></div>
+        <div class="fnam">${esc(displayName)}</div>
+        <div class="fcnt">${st} registro${st !== 1 ? 's' : ''}</div>
+        <span class="chev">▾</span>
+      </div>
+      <div class="fbody">`;
 
-    for(const[shName,recs]of Object.entries(sheets)){
-      if(!recs.length)continue;
-      const isFac=sname.includes('Facilidad');
+    for (const [shName, recs] of Object.entries(sheets)) {
+      if (!recs.length) continue;
+      h += `<div class="ssec"><div class="sttl">${esc(shName)}<span class="sbdg">${recs.length} reg.</span></div>`;
 
-      h+=`<div class="ssec"><div class="sttl">${shName}<span class="sbdg">${recs.length} reg.</span></div>`;
-
-      if(isFac){
-        // FACILIDADES (sin cambios)
-        const MESES=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
-        recs.forEach((rec,ri)=>{
-          if(recs.length>1)
-            h+=`<div style="padding:4px 10px;font-size:9px;color:var(--tx3);font-family:'IBM Plex Mono',monospace;background:var(--sur);border:1px solid var(--brd);border-bottom:none">REGISTRO ${ri+1}</div>`;
-          const infoKeys=['TARJETA','TURNO','ENTRADA','SALIDA','SERVICIO'];
-          const infoFields=infoKeys.filter(k=>rec[k]!==undefined&&rec[k]!==null&&rec[k]!=='');
-          if(infoFields.length){
-            h+=`<div class="fac-info">`;
-            infoFields.forEach(k=>{
-              let v=rec[k];
-              let display='';
-              let extraClass='';
-              const vs=String(v||'').trim();
-              if(k==='ENTRADA'||k==='SALIDA'){
-                display=isExcelTime(vs)?fmtTime(vs):vs;
-                extraClass=' time';
-              } else {
-                display=isISODate(vs)?fmtDate(vs):vs;
-              }
-              h+=`<div class="fac-field"><span class="fac-key">${k}</span><span class="fac-val${extraClass}">${esc(display)}</span></div>`;
+      if (isFac) {
+        const infoKeys = ['TARJETA','TURNO','ENTRADA','SALIDA','SERVICIO'];
+        recs.forEach((rec, ri) => {
+          if (recs.length > 1) h += `<div style="padding:4px 12px;font-size:9px;color:var(--tx3);font-family:'IBM Plex Mono',monospace;background:var(--soft);border:1px solid var(--brd);border-bottom:none;border-top:${ri>0?'1px solid var(--brd)':'none'}">REGISTRO ${ri + 1}</div>`;
+          const infoFields = infoKeys.filter(k => rec[k] !== undefined && rec[k] !== null && rec[k] !== '');
+          if (infoFields.length) {
+            h += `<div class="fac-info">`;
+            infoFields.forEach(k => {
+              const vs = String(rec[k] ?? '').trim();
+              const isTime = (k === 'ENTRADA' || k === 'SALIDA');
+              const display = isTime ? (isExcelTime(vs) ? fmtTime(vs) : vs) : (isISODate(vs) ? fmtDate(vs) : vs);
+              h += `<div class="fac-field"><span class="fac-key">${esc(k)}</span><span class="fac-val${isTime?' time':''}">${esc(display)}</span></div>`;
             });
-            h+=`</div>`;
+            h += `</div>`;
           }
-          h+=`<div class="fac-grid">`;
-          MESES.forEach(mes=>{
-            const key=`FACILIDADES ADMINISTRATIVAS ${mes} 2026`;
-            const val=rec[key];
-            const vs=String(val||'').trim();
-            const isEmpty=!vs||vs==='.'||vs==='}'||/^\s+$/.test(vs);
-            const chips=isEmpty?'':fmtFacilidad(vs);
-            h+=`<div class="mes-card ${isEmpty?'empty-mes':''}">
-              <div class="mes-nom">${mes}</div>
-              ${isEmpty
-                ?'<div class="mes-val">—</div>'
-                :`<div class="day-chips">${chips}</div>`}
+          h += `<div class="fac-grid">`;
+          MESES.forEach(mes => {
+            const key = `FACILIDADES ADMINISTRATIVAS ${mes} 2026`;
+            const val  = rec[key];
+            const vs   = String(val ?? '').trim();
+            const isEmpty = !vs || vs === '.' || vs === '}' || /^\s+$/.test(vs);
+            const chips = isEmpty ? '' : fmtFacilidad(vs);
+            h += `<div class="mes-card ${isEmpty ? 'empty-mes' : ''}">
+              <div class="mes-nom">${esc(mes)}</div>
+              ${isEmpty ? '<div class="mes-val">—</div>' : `<div class="day-chips">${chips}</div>`}
             </div>`;
           });
-          h+=`</div>`;
+          h += `</div>`;
         });
       } else {
-        // TABLA GENÉRICA: mostrar todas las columnas (excepto "EMPTY")
-        // TABLA GENÉRICA: mostrar TODAS las columnas del Excel
-const allKeys = [];
-
-recs.forEach(r => {
-  Object.keys(r).forEach(k => {
-    if (!allKeys.includes(k)) {
-      allKeys.push(k);
-    }
-  });
-});
-
-// NO eliminar columnas EMPTY porque
-// el Excel usa esas columnas para datos reales
-const dk = allKeys;
-        
-        h+=`<div class="tw"><table><thead><tr><th>#</th>${dk.map(k=>`<th>${esc(k)}</th>`).join('')}</tr></thead><tbody>`;
-        recs.forEach((rec,ri)=>{
-          h+=`<tr><td class="rn">${ri+1}</td>${dk.map(k=>{
-            const raw=rec[k];
-            const v=fmtCell(k,raw);
-            const cls=ccc(k,String(raw||''));
-            return`<td class="${cls}" title="${esc(v)}">${esc(v)}</td>`;
+        // Tabla genérica — todas las columnas
+        const allKeys = [];
+        recs.forEach(r => Object.keys(r).forEach(k => { if (!allKeys.includes(k)) allKeys.push(k); }));
+        h += `<div class="tw"><table><thead><tr><th>#</th>${allKeys.map(k => `<th>${esc(k)}</th>`).join('')}</tr></thead><tbody>`;
+        recs.forEach((rec, ri) => {
+          h += `<tr><td class="rn">${ri + 1}</td>${allKeys.map(k => {
+            const raw = rec[k];
+            const v   = fmtCell(k, raw);
+            const cls = cellClass(k, String(raw ?? ''));
+            return `<td class="${cls}" title="${esc(v)}">${esc(v)}</td>`;
           }).join('')}</tr>`;
         });
-        h+=`</tbody></table></div>`;
+        h += `</tbody></table></div>`;
       }
-      h+=`</div>`;
+      h += `</div>`; // ssec
     }
-    h+=`</div></div>`;
+    h += `</div></div>`; // fbody + fsec
   }
 
-  const rp=document.getElementById('rp');
-  rp.innerHTML=h;
+  const rp = document.getElementById('rp');
+  rp.innerHTML = h;
   rp.classList.add('on');
-  rp.scrollTop=0;
-  document.getElementById('em').style.display='none';
+  rp.scrollTop = 0;
+  document.getElementById('em').style.display = 'none';
 }
 
-function toggleF(hdr){
+function toggleF(hdr) {
   hdr.classList.toggle('col');
   hdr.nextElementSibling.classList.toggle('hid');
 }
-function getIni(n){
-  if(!n)return'?';
-  const p=n.replace(/,/g,' ').replace(/\//g,' ').split(/\s+/).filter(Boolean);
-  return p.length>=2?(p[0][0]+p[1][0]).toUpperCase():n[0].toUpperCase();
-}
-function esc(s){
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
 
-loadData();
+/* ═══════════════════════════════════════════════════════════
+   PDF — PALETA Y HELPERS CENTRALIZADOS
+═══════════════════════════════════════════════════════════ */
+const PDF = {
+  navy:    [31,  95,  139],
+  navyDk:  [21,  67,  101],
+  teal:    [47,  111,  99],
+  amber:   [160, 108,  32],
+  slate:   [88,  100, 116],
+  text:    [31,   41,  51],
+  muted:   [91,  103, 118],
+  light:   [130, 141, 155],
+  border:  [216, 224, 234],
+  soft:    [246, 248, 251],
+  white:   [255, 255, 255],
 
-  async function genPDF(){
+  fill(doc, c)    { doc.setFillColor(c[0],c[1],c[2]); },
+  draw(doc, c)    { doc.setDrawColor(c[0],c[1],c[2]); },
+  color(doc, c)   { doc.setTextColor(c[0],c[1],c[2]); },
 
-  if(!cur || !DB[cur]) return;
+  text(doc, t, x, y, { size=8, bold=false, color, align, maxWidth } = {}) {
+    doc.setFont('helvetica', bold ? 'bold' : 'normal');
+    doc.setFontSize(size);
+    this.color(doc, color || this.text_);
+    const opt = {};
+    if (align)    opt.align    = align;
+    if (maxWidth) opt.maxWidth = maxWidth;
+    doc.text(String(t ?? ''), x, y, opt);
+  },
 
-  const p = DB[cur];
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
+  wrap(doc, t, x, y, w, { size=7, color, lineH=3.8 } = {}) {
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(size);
+    this.color(doc, color || this.muted);
+    const lines = doc.splitTextToSize(String(t ?? ''), w);
+    doc.text(lines, x, y);
+    return y + lines.length * lineH;
+  },
 
-  // =====================================================
-  // HELPERS PARA LEER COLUMNAS CON NOMBRES VARIABLES
-  // =====================================================
+  trunc(doc, t, w) {
+    let s = String(t ?? '—');
+    if (doc.getTextWidth(s) <= w) return s;
+    while (s.length > 1 && doc.getTextWidth(s + '…') > w) s = s.slice(0,-1);
+    return s + '…';
+  },
 
-  function normKey(k){
-    return String(k || '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g,'')
-      .toUpperCase()
-      .replace(/\s+/g,' ')
-      .trim();
-  }
+  size(doc) { return { w: doc.internal.pageSize.getWidth(), h: doc.internal.pageSize.getHeight() }; },
 
-  function valByNames(row, names){
-    const wanted = names.map(normKey);
-    for(const [k,v] of Object.entries(row)){
-      if(v === null || v === undefined || String(v).trim() === '') continue;
-      if(wanted.includes(normKey(k))) return v;
+  header(doc, title, subtitle = '', meta = '') {
+    const { w } = this.size(doc);
+    this.fill(doc, this.navy);    doc.rect(0,0,w,30,'F');
+    this.fill(doc, this.navyDk); doc.rect(0,0,6,30,'F');
+    this.text(doc, title,    14, 13, { size:14, bold:true, color:this.white });
+    if (subtitle) this.text(doc, subtitle, 14, 20, { size:7.5, color:[220,230,240] });
+    if (meta)     this.text(doc, meta, w-12, 13, { size:7, color:[200,215,230], align:'right' });
+    this.draw(doc, this.border); doc.setLineWidth(.2); doc.line(14, 34, w-14, 34);
+  },
+
+  footer(doc, generated) {
+    const n = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= n; i++) {
+      doc.setPage(i);
+      const { w, h } = this.size(doc);
+      this.draw(doc, this.border); doc.setLineWidth(.18);
+      doc.line(14, h-10, w-14, h-10);
+      this.text(doc, `Hospital de la Mujer · Generado: ${generated}`, 14, h-5, { size:6.5, color:this.light });
+      this.text(doc, `Página ${i} de ${n}`, w-14, h-5, { size:6.5, color:this.light, align:'right' });
     }
-    return '';
-  }
+  },
 
-  function valByContains(row, words){
-    const wanted = words.map(normKey);
-    for(const [k,v] of Object.entries(row)){
-      if(v === null || v === undefined || String(v).trim() === '') continue;
-      const nk = normKey(k);
-      if(wanted.every(w => nk.includes(w))) return v;
-    }
-    return '';
-  }
+  section(doc, title, y, color = null) {
+    const { w } = this.size(doc);
+    const c = color || this.navy;
+    this.fill(doc, this.soft); this.draw(doc, this.border);
+    doc.roundedRect(14, y, w-28, 11, 3, 3, 'FD');
+    this.fill(doc, c); doc.roundedRect(14, y, 5, 11, 3, 3, 'F');
+    this.text(doc, title, 22, y+7.5, { size:9.5, bold:true });
+    return y + 16;
+  },
 
-  function firstVal(row, options){
-    for(const op of options){
-      const v = Array.isArray(op)
-        ? valByNames(row, op)
-        : valByContains(row, [op]);
+  kpi(doc, x, y, w, label, value, sub, color = null) {
+    const c = color || this.navy;
+    this.fill(doc, this.white); this.draw(doc, this.border);
+    doc.roundedRect(x, y, w, 26, 4, 4, 'FD');
+    this.fill(doc, c); doc.roundedRect(x, y, 5, 26, 4, 4, 'F');
+    this.text(doc, label, x+9, y+8,  { size:6.5, bold:true, color:this.muted });
+    this.text(doc, String(value), x+9, y+19, { size:13, bold:true, color:c });
+    this.text(doc, sub, x+w-5, y+19, { size:6, color:this.light, align:'right' });
+  },
 
-      if(v !== null && v !== undefined && String(v).trim() !== '') return v;
-    }
-    return '—';
-  }
+  ensure(doc, y, need, generated, title, subtitle) {
+    const { h, w } = this.size(doc);
+    if (y + need <= h - 18) return y;
+    doc.addPage(w > h ? 'landscape' : 'portrait');
+    this.header(doc, title, subtitle, generated);
+    return 40;
+  },
 
-  function outDate(v){
-    if(v === null || v === undefined || String(v).trim() === '') return '—';
-    const s = String(v).trim();
-    return isISODate(s) ? fmtDate(s) : s;
-  }
+  noData(doc, y, text = 'No hay registros disponibles') {
+    const { w } = this.size(doc);
+    this.fill(doc, this.soft); this.draw(doc, this.border);
+    doc.roundedRect(14, y, w-28, 28, 4, 4, 'FD');
+    this.text(doc, text, w/2, y+12, { size:11, bold:true, color:this.muted, align:'center' });
+    this.text(doc, 'Revisa los datos o cambia los filtros.', w/2, y+21, { size:7, color:this.light, align:'center' });
+  },
 
-  function outTime(v){
-    if(v === null || v === undefined || String(v).trim() === '') return '—';
-    const s = String(v).trim();
-    return isExcelTime(s) ? fmtTime(s) : s;
-  }
+  safeName(v) {
+    return String(v||'REPORTE').replace(/[^\w\sáéíóúÁÉÍÓÚñÑ]/gi,'').replace(/\s+/g,'_').slice(0,80);
+  },
 
-  function fechaLicencia(row, suf=''){
-    const d = valByNames(row, [`D${suf}`]);
-    const m = valByNames(row, [`M${suf}`]);
-    const a = valByNames(row, [`A${suf}`]) || valByNames(row, ['A']);
-
-    if(d || m || a){
-      return `${d || '--'}/${m || '--'}/${a || '--'}`;
-    }
-
-    return outDate(firstVal(row, [
-      [`FECHA${suf}`],
-      [`FECHA DE INICIO${suf}`],
-      [`INICIO${suf}`]
-    ]));
-  }
-
-  function cleanFacilityValue(v){
-    if(v === null || v === undefined) return '';
-    let s = String(v).trim();
-    if(!s || s === '.' || s === '}') return '';
-    if(isISODate(s)) return fmtDate(s);
-    return s.replace(/\\/g,'/').replace(/,\s*$/,'').trim();
-  }
-
-  function hasRealData(values){
-    return values.some(v => {
-      const s = String(v ?? '').trim();
-      return s && s !== '—' && s !== '--/--/--' && s !== '././.' && s !== 'undefined/undefined/undefined';
-    });
-  }
-
-  function hasValidLicencia(row, diagnostico, inicio, termino, dias){
-    // Evita contar renglones vacíos o de relleno del Excel.
-    // Se considera licencia real si tiene diagnóstico, días o una fecha armada.
-    return hasRealData([diagnostico, dias]) ||
-      /\d/.test(String(inicio || '')) ||
-      /\d/.test(String(termino || ''));
-  }
-
-  function expandDiasFacilidad(valor){
-    const v = cleanFacilityValue(valor);
-    if(!v) return [];
-
-    // Si viene como fecha ISO de Excel/JSON, cuenta como una facilidad.
-    if(/^\d{2}\/\d{2}\/\d{4}$/.test(v)) return [v];
-
-    // Formatos esperados:
-    // 12/15/05/2026  => dos facilidades: 12/05/2026 y 15/05/2026
-    // 12-15/05/2026  => una facilidad: 12-15/05/2026
-    // 12,15/05/2026  => dos facilidades: 12/05/2026 y 15/05/2026
-    const match = v.match(/^(.+)\/(\d{1,2})\/(\d{4})$/);
-    if(!match) return [v];
-
-    const diasPart = match[1].trim();
-    const mm = String(parseInt(match[2],10)).padStart(2,'0');
-    const yr = match[3];
-    const eventos = [];
-
-    diasPart.split('/').forEach(token => {
-      token = token.trim();
-      if(!token) return;
-
-      if(token.includes('-')){
-        // Un rango cuenta como una sola facilidad.
-        const partes = token.split('-').map(x => x.trim()).filter(Boolean);
-        if(partes.length === 2){
-          eventos.push(`${pad(partes[0])}-${pad(partes[1])}/${mm}/${yr}`);
-        } else {
-          eventos.push(`${token}/${mm}/${yr}`);
-        }
-      } else if(token.includes(',')){
-        // Días separados por coma cuentan como facilidades independientes.
-        token.split(',').map(x => x.trim()).filter(Boolean).forEach(d => {
-          eventos.push(`${pad(d)}/${mm}/${yr}`);
-        });
-      } else {
-        eventos.push(`${pad(token)}/${mm}/${yr}`);
+  table(doc, startY, head, body, opt = {}) {
+    if (!body || !body.length) return startY;
+    const generated = opt.generated || '';
+    const pageTitle = opt.pageTitle || '';
+    const pageSub   = opt.pageSub   || '';
+    const margin    = Object.assign({ left:14, right:14, bottom:18, top:40 }, opt.margin || {});
+    const firstPage = doc.internal.getCurrentPageInfo().pageNumber;
+    const self = this;
+    doc.autoTable({
+      startY, head:[head], body, theme:'grid',
+      margin, tableWidth: opt.tableWidth || 'auto',
+      styles: { font:'helvetica', fontSize:opt.fontSize||6.8, cellPadding:opt.cellPadding||2.2, overflow:'linebreak', valign:'middle', textColor:self.text, lineColor:self.border, lineWidth:.12, minCellHeight:5 },
+      headStyles: { fillColor: opt.headColor || self.navy, textColor:[255,255,255], fontStyle:'bold', halign:'center', valign:'middle' },
+      alternateRowStyles: { fillColor:[249,251,253] },
+      columnStyles: opt.columnStyles || {},
+      didDrawPage() {
+        const cur = doc.internal.getCurrentPageInfo().pageNumber;
+        if (cur !== firstPage && pageTitle) self.header(doc, pageTitle, pageSub, generated);
       }
     });
+    return doc.lastAutoTable.finalY + 10;
+  },
 
-    return eventos.length ? eventos : [v];
-  }
+  personCard(doc, y, p, tarjeta) {
+    this.fill(doc, this.white); this.draw(doc, this.border);
+    doc.roundedRect(14, y, 182, 38, 4, 4, 'FD');
+    this.fill(doc, this.navy); doc.roundedRect(18, y+9, 20, 20, 3, 3, 'F');
+    this.text(doc, getIni(p.nombre||p.rfc), 28, y+21, { size:9, bold:true, color:this.white, align:'center' });
+    this.text(doc, this.trunc(doc, p.nombre||'SIN NOMBRE REGISTRADO', 136), 44, y+14, { size:11.5, bold:true });
+    this.text(doc, `RFC: ${p.rfc}`, 44, y+21, { size:7.8, color:this.muted });
+    this.text(doc, `Tarjeta / Nómina: ${tarjeta||'—'}`, 44, y+28, { size:7.8, bold:true, color:this.navy });
+    this.text(doc, 'Reporte individual · Licencias médicas, LCGS y facilidades administrativas', 44, y+34, { size:6.5, color:this.light });
+    return y + 46;
+  },
 
-  function diasFacilidad(row){
-    const meses = [
-      'ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO',
-      'JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'
-    ];
-
-    const dias = [];
-
-    meses.forEach(mes => {
-      const key = Object.keys(row).find(k => {
-        const nk = normKey(k);
-        return nk.includes('FACILIDADES ADMINISTRATIVAS') && nk.includes(mes) && nk.includes('2026');
-      });
-
-      if(!key) return;
-
-      expandDiasFacilidad(row[key]).forEach(d => dias.push(`${mes}: ${d}`));
+  hBar(doc, { x, y, w, h, title, data, total, color, limit=5, labelW=55 }) {
+    const c = color || this.navy;
+    this.fill(doc, this.white); this.draw(doc, this.border);
+    doc.roundedRect(x, y, w, h, 4, 4, 'FD');
+    this.text(doc, title, x+5, y+8, { size:8.5, bold:true });
+    const items = (data||[]).slice(0, limit);
+    if (!items.length) { this.text(doc, 'Sin datos', x+5, y+18, { size:7, color:this.light }); return; }
+    const rowH = Math.min(10, (h-18) / items.length);
+    const max  = Math.max(...items.map(i=>i[1]), 1);
+    const bX = x + labelW, valW = 26, bW = Math.max(10, w - labelW - valW - 6);
+    let cy = y + 15;
+    items.forEach(([name, val]) => {
+      const pct = total ? (val/total*100) : 0;
+      this.text(doc, this.trunc(doc, name, labelW-3), x+4, cy+3.5, { size:6.3, color:this.muted });
+      this.fill(doc, [235,240,246]); doc.roundedRect(bX, cy+.5, bW, 4, 2, 2, 'F');
+      this.fill(doc, c);             doc.roundedRect(bX, cy+.5, Math.max(1.5,(val/max)*bW), 4, 2, 2, 'F');
+      this.text(doc, `${val} · ${pct.toFixed(0)}%`, x+w-2, cy+3.5, { size:6, color:this.muted, align:'right' });
+      cy += rowH;
     });
+  },
 
-    return dias;
-  }
-
-  function isLicMed(src){
-    const ns = normKey(src);
-    return (ns.includes('CONTROL') || ns.includes('LICENCIA')) &&
-           !ns.includes('LCGS') &&
-           !ns.includes('GOCE') &&
-           !ns.includes('FACILIDAD');
-  }
-
-  function isLCGS(src){
-    const ns = normKey(src);
-    return ns.includes('LCGS') || ns.includes('GOCE');
-  }
-
-  function isFac(src){
-    return normKey(src).includes('FACILIDAD');
-  }
-
-  // =====================================================
-  // VARIABLES
-  // =====================================================
-
-  let totalLic = 0;
-  let totalLCGS = 0;
-  let totalFac = 0;
-
-  const licencias = [];
-  const lcgs = [];
-  const facilidades = [];
-
-  // =====================================================
-  // RECORRER DATOS
-  // =====================================================
-
-  Object.entries(p.fuentes).forEach(([src, sheets]) => {
-
-    Object.entries(sheets).forEach(([sheet, recs]) => {
-
-      recs.forEach(r => {
-
-        // =================================================
-        // LICENCIAS MÉDICAS
-        // =================================================
-
-        if(isLicMed(src)){
-
-          const diagnostico = firstVal(r, [
-            ['DIAGNOSTICO','DIAGNÓSTICO','DIAGNOSTICO_2','DIAGNÓSTICO_2'],
-            'DIAGNOSTICO'
-          ]);
-
-          const dias = firstVal(r, [
-            ['# DIAS','# DÍAS','DIAS','DÍAS','NO. DIAS','NO. DÍAS','NUMERO DE DIAS','NÚMERO DE DÍAS'],
-            'DIAS'
-          ]);
-
-          const inicio = fechaLicencia(r, '');
-          const termino = fechaLicencia(r, '_2');
-
-          if(hasValidLicencia(r, diagnostico, inicio, termino, dias)){
-            licencias.push([
-              diagnostico,
-              inicio,
-              termino,
-              dias
-            ]);
-          }
-        }
-
-        // =================================================
-        // LICENCIAS CON GOCE DE SUELDO
-        // =================================================
-
-        else if(isLCGS(src)){
-
-          const rowLCGS = [
-
-            firstVal(r, [
-              ['CONSECUTIVO','NO.','NUMERO','NÚMERO']
-            ]),
-
-            firstVal(r, [
-              ['NO. DÍAS','NO. DIAS','DIAS','DÍAS']
-            ]),
-
-            outDate(firstVal(r, [
-              ['FECHA DE INICIO','FECHA INICIO','INICIO']
-            ])),
-
-            outDate(firstVal(r, [
-              ['FECHA DE TERMINO','FECHA DE TÉRMINO','FECHA TERMINO','FECHA TÉRMINO','TERMINO','TÉRMINO']
-            ])),
-
-            firstVal(r, [
-              ['TURNO','TURNO ','JORNADA'],
-              'TURNO'
-            ])
-          ];
-
-          if(hasRealData(rowLCGS)){
-            lcgs.push(rowLCGS);
-          }
-        }
-
-        // =================================================
-        // FACILIDADES ADMINISTRATIVAS
-        // =================================================
-
-        else if(isFac(src)){
-
-          const servicio = firstVal(r, [
-            ['SERVICIO','ÁREA','AREA']
-          ]);
-
-          const turno = firstVal(r, [
-            ['TURNO','TURNO ','JORNADA'],
-            'TURNO'
-          ]);
-
-          const entrada = outTime(firstVal(r, [
-            ['ENTRADA','HORA ENTRADA']
-          ]));
-
-          const salida = outTime(firstVal(r, [
-            ['SALIDA','HORA SALIDA']
-          ]));
-
-          const eventosFacilidad = diasFacilidad(r);
-
-          // Cada día separado cuenta como una facilidad independiente.
-          // Ejemplo: 12/15/05/2026 = 2 facilidades.
-          // Un rango cuenta como una sola facilidad.
-          // Ejemplo: 12-15/05/2026 = 1 facilidad.
-          if(eventosFacilidad.length){
-            eventosFacilidad.forEach(dia => {
-              facilidades.push([
-                servicio,
-                turno,
-                entrada,
-                salida,
-                dia
-              ]);
-            });
-          } else {
-            const rowFacilidad = [servicio, turno, entrada, salida, '—'];
-            if(hasRealData(rowFacilidad)) facilidades.push(rowFacilidad);
-          }
-        }
-
-      });
-
+  vBar(doc, { x, y, w, h, title, data, total, color, limit=10 }) {
+    const c = color || this.amber;
+    this.fill(doc, this.white); this.draw(doc, this.border);
+    doc.roundedRect(x, y, w, h, 4, 4, 'FD');
+    this.text(doc, title, x+5, y+8, { size:8.5, bold:true });
+    const items = (data||[]).slice(0, limit);
+    if (!items.length) { this.text(doc, 'Sin datos', x+5, y+18, { size:7, color:this.light }); return; }
+    const max    = Math.max(...items.map(i=>i[1]), 1);
+    const baseY  = y + h - 12;
+    const chartH = h - 25;
+    const gap = 3;
+    const bw  = Math.max(4, (w - 12 - gap*(items.length-1)) / items.length);
+    items.forEach(([name, val], idx) => {
+      const bx = x + 6 + idx*(bw+gap);
+      const bh = Math.max(2, (val/max)*chartH);
+      this.fill(doc, c); doc.roundedRect(bx, baseY-bh, bw, bh, 1, 1, 'F');
+      this.text(doc, String(val), bx+bw/2, baseY-bh-1.5, { size:5.5, color:this.muted, align:'center' });
+      this.text(doc, String(name).split(' ')[0].slice(0,5), bx+bw/2, baseY+5, { size:5.3, color:this.light, align:'center' });
     });
-
-  });
-
-  // Los totales deben salir de los arreglos ya filtrados,
-  // para que coincidan exactamente con lo que se imprime abajo.
-  totalLic = licencias.length;
-  totalLCGS = lcgs.length;
-  totalFac = facilidades.length;
-
-  // =====================================================
-  // HEADER
-  // =====================================================
-
-  doc.setFillColor(31,95,139);
-  doc.rect(0,0,210,30,'F');
-
-  doc.setTextColor(255,255,255);
-
-  doc.setFontSize(20);
-  doc.text('Reporte Integral de Licencias',14,15);
-
-  doc.setFontSize(10);
-  doc.text('Hospital de la Mujer',14,22);
-
-  // =====================================================
-  // PERSONA
-  // =====================================================
-
-  doc.setTextColor(0,0,0);
-
-  let y = 40;
-
-  doc.setFontSize(16);
-  doc.text(p.nombre || 'SIN NOMBRE',14,y);
-
-  y += 8;
-
-  doc.setFontSize(11);
-  doc.text(`RFC: ${p.rfc}`,14,y);
-
-  y += 14;
-
-  // =====================================================
-  // RESUMEN
-  // =====================================================
-
-  doc.setFillColor(240,240,240);
-
-  doc.roundedRect(14,y,180,28,3,3,'F');
-
-  doc.setFontSize(12);
-
-  doc.text(`Licencias Médicas: ${totalLic}`,20,y+10);
-
-  doc.text(`LCGS: ${totalLCGS}`,20,y+18);
-
-  doc.text(`Facilidades: ${totalFac}`,100,y+10);
-
-  doc.text(`Total Registros: ${totalLic+totalLCGS+totalFac}`,100,y+18);
-
-  y += 40;
-
-  // =====================================================
-  // LICENCIAS
-  // =====================================================
-
-  if(licencias.length){
-
-    doc.setFontSize(14);
-
-    doc.text('Licencias Médicas',14,y);
-
-    y += 4;
-
-    doc.autoTable({
-
-      startY:y,
-
-      head:[[
-        'Diagnóstico',
-        'Inicio',
-        'Término',
-        'Días'
-      ]],
-
-      body:licencias,
-
-      styles:{
-        fontSize:8,
-        cellWidth:'wrap',
-        overflow:'linebreak'
-      },
-
-      columnStyles:{
-        0:{cellWidth:80},
-        1:{cellWidth:32},
-        2:{cellWidth:32},
-        3:{cellWidth:18}
-      },
-
-      headStyles:{
-        fillColor:[31,95,139]
-      }
-
-    });
-
-    y = doc.lastAutoTable.finalY + 12;
   }
+};
+// fix self-reference
+PDF.text_ = PDF.text;
 
-  // =====================================================
-  // LCGS
-  // =====================================================
-
-  if(lcgs.length){
-
-    doc.setFontSize(14);
-
-    doc.text('Licencias con Goce de Sueldo',14,y);
-
-    y += 4;
-
-    doc.autoTable({
-
-      startY:y,
-
-      head:[[
-        'Consecutivo',
-        'Días',
-        'Inicio',
-        'Término',
-        'Turno'
-      ]],
-
-      body:lcgs,
-
-      styles:{
-        fontSize:8,
-        overflow:'linebreak'
-      },
-
-      headStyles:{
-        fillColor:[31,95,139]
-      }
-
-    });
-
-    y = doc.lastAutoTable.finalY + 12;
-  }
-
-  // =====================================================
-  // FACILIDADES
-  // =====================================================
-
-  if(facilidades.length){
-
-    doc.setFontSize(14);
-
-    doc.text('Facilidades Administrativas',14,y);
-
-    y += 4;
-
-    doc.autoTable({
-
-      startY:y,
-
-      head:[[
-        'Servicio',
-        'Turno',
-        'Entrada',
-        'Salida',
-        'Día de facilidad'
-      ]],
-
-      body:facilidades,
-
-      styles:{
-        fontSize:8,
-        overflow:'linebreak'
-      },
-
-      columnStyles:{
-        0:{cellWidth:38},
-        1:{cellWidth:24},
-        2:{cellWidth:22},
-        3:{cellWidth:22},
-        4:{cellWidth:74}
-      },
-
-      headStyles:{
-        fillColor:[31,95,139]
-      }
-
-    });
-
-  }
-
-  // =====================================================
-  // FOOTER
-  // =====================================================
-
-  const pageCount = doc.internal.getNumberOfPages();
-
-  for(let i=1;i<=pageCount;i++){
-
-    doc.setPage(i);
-
-    doc.setFontSize(9);
-
-    doc.setTextColor(120);
-
-    doc.text(
-      `Generado: ${new Date().toLocaleString('es-MX')}`,
-      14,
-      290
-    );
-
-    doc.text(
-      `Página ${i} de ${pageCount}`,
-      170,
-      290
-    );
-  }
-
-  // =====================================================
-  // DESCARGAR
-  // =====================================================
-
-  const safeName =
-    (p.nombre || p.rfc)
-      .replace(/[^\w\s]/gi,'')
-      .replace(/\s+/g,'_');
-
-  doc.save(`REPORTE_${safeName}.pdf`);
+/* ═══════════════════════════════════════════════════════════
+   HELPERS DE EXTRACCIÓN DE DATOS
+═══════════════════════════════════════════════════════════ */
+function norm(k) {
+  return String(k||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
 }
-
-
-// =====================================================
-// REPORTE GLOBAL: FACILIDADES OTORGADAS EN EL MES ACTUAL
-// =====================================================
-async function genReporteGlobalFacMes(mesIndex = new Date().getMonth(), anio = new Date().getFullYear()){
-
-  if(!DB){
-    alert('Primero espera a que cargue la base de datos.');
-    return;
-  }
-
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-
-  const MESES = [
-    'ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO',
-    'JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'
-  ];
-
-  const mesNombre = MESES[mesIndex];
-  const mesNumero = String(mesIndex + 1).padStart(2,'0');
-  const anioStr = String(anio);
-
-  function normKey(k){
-    return String(k || '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g,'')
-      .toUpperCase()
-      .replace(/\s+/g,' ')
-      .trim();
-  }
-
-  function isFacSource(src){
-    return normKey(src).includes('FACILIDAD');
-  }
-
-  function valByNames(row, names){
-    const wanted = names.map(normKey);
-    for(const [k,v] of Object.entries(row)){
-      if(v === null || v === undefined || String(v).trim() === '') continue;
-      if(wanted.includes(normKey(k))) return v;
-    }
-    return '';
-  }
-
-  function outTime(v){
-    if(v === null || v === undefined || String(v).trim() === '') return '—';
-    const s = String(v).trim();
-    return isExcelTime(s) ? fmtTime(s) : s;
-  }
-
-  function cleanFacilityValue(v){
-    if(v === null || v === undefined) return '';
-    let s = String(v).trim();
-    if(!s || s === '.' || s === '}') return '';
-    if(isISODate(s)) return fmtDate(s);
-    return s.replace(/\\/g,'/').replace(/,\s*$/,'').trim();
-  }
-
-  function expandDiasFacilidad(valor){
-    const v = cleanFacilityValue(valor);
-    if(!v) return [];
-
-    // Fecha completa única: 12/05/2026
-    if(/^\d{2}\/\d{2}\/\d{4}$/.test(v)) return [v];
-
-    // Formatos esperados:
-    // 12/15/05/2026 = 2 facilidades
-    // 12,15/05/2026 = 2 facilidades
-    // 12-15/05/2026 = 1 facilidad
-    const match = v.match(/^(.+)\/(\d{1,2})\/(\d{4})$/);
-    if(!match) return [v];
-
-    const diasPart = match[1].trim();
-    const mm = String(parseInt(match[2],10)).padStart(2,'0');
-    const yr = match[3];
-    const eventos = [];
-
-    diasPart.split('/').forEach(token => {
-      token = token.trim();
-      if(!token) return;
-
-      if(token.includes('-')){
-        const partes = token.split('-').map(x => x.trim()).filter(Boolean);
-        if(partes.length === 2){
-          eventos.push(`${pad(partes[0])}-${pad(partes[1])}/${mm}/${yr}`);
-        } else {
-          eventos.push(`${token}/${mm}/${yr}`);
-        }
-      } else if(token.includes(',')){
-        token.split(',').map(x => x.trim()).filter(Boolean).forEach(d => {
-          eventos.push(`${pad(d)}/${mm}/${yr}`);
-        });
-      } else {
-        eventos.push(`${pad(token)}/${mm}/${yr}`);
-      }
-    });
-
-    return eventos.length ? eventos : [v];
-  }
-
-  function getCampoMes(row){
-    return Object.keys(row).find(k => {
-      const nk = normKey(k);
-      return nk.includes('FACILIDADES ADMINISTRATIVAS') &&
-             nk.includes(mesNombre) &&
-             nk.includes(anioStr);
-    });
-  }
-
-  const detalle = [];
-  const porPersona = new Map();
-  const porServicio = new Map();
-  const porTurno = new Map();
-
-  Object.values(DB).forEach(persona => {
-    Object.entries(persona.fuentes || {}).forEach(([src, sheets]) => {
-      if(!isFacSource(src)) return;
-
-      Object.values(sheets || {}).forEach(recs => {
-        (recs || []).forEach(row => {
-          const campoMes = getCampoMes(row);
-          if(!campoMes) return;
-
-          const eventos = expandDiasFacilidad(row[campoMes]);
-          if(!eventos.length) return;
-
-          const servicio = valByNames(row, ['SERVICIO','AREA','ÁREA']) || '—';
-          const turno = valByNames(row, ['TURNO','JORNADA']) || '—';
-          const entrada = outTime(valByNames(row, ['ENTRADA','HORA ENTRADA']));
-          const salida = outTime(valByNames(row, ['SALIDA','HORA SALIDA']));
-
-          eventos.forEach(dia => {
-            detalle.push({
-              rfc: persona.rfc || '—',
-              nombre: persona.nombre || 'SIN NOMBRE',
-              servicio,
-              turno,
-              entrada,
-              salida,
-              dia
-            });
-
-            const pKey = `${persona.rfc || '—'} | ${persona.nombre || 'SIN NOMBRE'}`;
-            porPersona.set(pKey, (porPersona.get(pKey) || 0) + 1);
-            porServicio.set(servicio, (porServicio.get(servicio) || 0) + 1);
-            porTurno.set(turno, (porTurno.get(turno) || 0) + 1);
-          });
-        });
-      });
-    });
-  });
-
-  detalle.sort((a,b) =>
-    String(a.nombre).localeCompare(String(b.nombre),'es') ||
-    String(a.dia).localeCompare(String(b.dia),'es')
-  );
-
-  // =====================================================
-  // HEADER
-  // =====================================================
-
-  doc.setFillColor(31,95,139);
-  doc.rect(0,0,210,32,'F');
-  doc.setTextColor(255,255,255);
-  doc.setFontSize(17);
-  doc.text('Reporte Global de Facilidades Administrativas',14,15);
-  doc.setFontSize(10);
-  doc.text(`Mes: ${mesNombre} ${anioStr} · Hospital de la Mujer`,14,23);
-
-  let y = 42;
-  doc.setTextColor(0,0,0);
-
-  doc.setFillColor(245,245,245);
-  doc.roundedRect(14,y,180,26,3,3,'F');
-  doc.setFontSize(13);
-  doc.text(`Total de facilidades otorgadas: ${detalle.length}`,20,y+11);
-  doc.setFontSize(10);
-  doc.text(`Personas con facilidad: ${porPersona.size}`,20,y+20);
-  doc.text(`Servicios registrados: ${porServicio.size}`,100,y+20);
-
-  y += 38;
-
-  if(!detalle.length){
-    doc.setFontSize(12);
-    doc.text(`No se encontraron facilidades administrativas para ${mesNombre} ${anioStr}.`,14,y);
-  } else {
-
-    // RESUMEN POR SERVICIO
-    doc.setFontSize(14);
-    doc.text('Resumen por servicio',14,y);
-    y += 4;
-
-    doc.autoTable({
-      startY:y,
-      head:[['Servicio','Total']],
-      body:Array.from(porServicio.entries())
-        .sort((a,b) => b[1]-a[1] || String(a[0]).localeCompare(String(b[0]),'es')),
-      styles:{fontSize:8, overflow:'linebreak'},
-      columnStyles:{0:{cellWidth:140},1:{cellWidth:25, halign:'center'}},
-      headStyles:{fillColor:[31,95,139]}
-    });
-
-    y = doc.lastAutoTable.finalY + 12;
-
-    // RESUMEN POR TURNO
-    doc.setFontSize(14);
-    doc.text('Resumen por turno',14,y);
-    y += 4;
-
-    doc.autoTable({
-      startY:y,
-      head:[['Turno','Total']],
-      body:Array.from(porTurno.entries())
-        .sort((a,b) => b[1]-a[1] || String(a[0]).localeCompare(String(b[0]),'es')),
-      styles:{fontSize:8, overflow:'linebreak'},
-      columnStyles:{0:{cellWidth:80},1:{cellWidth:25, halign:'center'}},
-      headStyles:{fillColor:[31,95,139]}
-    });
-
-    y = doc.lastAutoTable.finalY + 12;
-
-    // DETALLE
-    doc.setFontSize(14);
-    doc.text('Detalle de facilidades',14,y);
-    y += 4;
-
-    doc.autoTable({
-      startY:y,
-      head:[[ 'RFC','Nombre','Servicio','Turno','Entrada','Salida','Día de facilidad' ]],
-      body:detalle.map(d => [d.rfc,d.nombre,d.servicio,d.turno,d.entrada,d.salida,d.dia]),
-      styles:{fontSize:7, overflow:'linebreak'},
-      columnStyles:{
-        0:{cellWidth:24},
-        1:{cellWidth:42},
-        2:{cellWidth:36},
-        3:{cellWidth:18},
-        4:{cellWidth:17},
-        5:{cellWidth:17},
-        6:{cellWidth:34}
-      },
-      headStyles:{fillColor:[31,95,139]}
-    });
-  }
-
-  // FOOTER
-  const pageCount = doc.internal.getNumberOfPages();
-  for(let i=1;i<=pageCount;i++){
-    doc.setPage(i);
-    doc.setFontSize(9);
-    doc.setTextColor(120);
-    doc.text(`Generado: ${new Date().toLocaleString('es-MX')}`,14,290);
-    doc.text(`Página ${i} de ${pageCount}`,170,290);
-  }
-
-  doc.save(`REPORTE_GLOBAL_FACILIDADES_${mesNombre}_${anioStr}.pdf`);
-}
-
-
-// =====================================================
-// REPORTE AVANZADO: FACILIDADES ADMINISTRATIVAS
-// =====================================================
-const FAC_MESES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
-
-function advNorm(v){
-  return String(v || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g,'')
-    .toUpperCase()
-    .replace(/\s+/g,' ')
-    .trim();
-}
-function advIsFacSource(src){return advNorm(src).includes('FACILIDAD');}
-function advValByNames(row,names){
-  const wanted=names.map(advNorm);
-  for(const [k,v] of Object.entries(row||{})){
-    if(v===null||v===undefined||String(v).trim()==='') continue;
-    if(wanted.includes(advNorm(k))) return v;
+function valNames(row, names) {
+  const wanted = names.map(norm);
+  for (const [k,v] of Object.entries(row||{})) {
+    if (v===null||v===undefined||String(v).trim()==='') continue;
+    if (wanted.includes(norm(k))) return v;
   }
   return '';
 }
-function advClean(v){
-  if(v===null||v===undefined) return '';
-  let s=String(v).trim();
-  if(!s||s==='.'||s==='}'||/^\s+$/.test(s)) return '';
-  if(isISODate(s)) return fmtDate(s);
+function valContains(row, words) {
+  const wanted = words.map(norm);
+  for (const [k,v] of Object.entries(row||{})) {
+    if (v===null||v===undefined||String(v).trim()==='') continue;
+    const nk = norm(k);
+    if (wanted.every(w => nk.includes(w))) return v;
+  }
+  return '';
+}
+function firstVal(row, options) {
+  for (const op of options) {
+    const v = Array.isArray(op) ? valNames(row, op) : valContains(row, [op]);
+    if (v!==null && v!==undefined && String(v).trim()!=='') return v;
+  }
+  return '—';
+}
+function outDate(v) {
+  if (!v || String(v).trim()==='') return '—';
+  const s = String(v).trim();
+  return isISODate(s) ? fmtDate(s) : s;
+}
+function outTime(v) {
+  if (!v || String(v).trim()==='') return '—';
+  const s = String(v).trim();
+  return isExcelTime(s) ? fmtTime(s) : s;
+}
+function hasData(values) {
+  return values.some(v => { const s = String(v??'').trim(); return s && s!=='—' && !/^-{2,}/.test(s); });
+}
+function guessDias(row) {
+  const exact = valNames(row, ['# DIAS','# DÍAS','NO DIAS','NO DÍAS','NO. DIAS','NO. DÍAS','N° DIAS','N° DÍAS','NUMERO DE DIAS','NÚMERO DE DÍAS','DIAS','DÍAS','TOTAL DIAS','TOTAL DÍAS','DURACION','DURACIÓN']);
+  if (exact) return exact;
+  for (const [k,v] of Object.entries(row||{})) {
+    if (!v || String(v).trim()==='') continue;
+    const nk = norm(k);
+    if (nk.includes('DIAGNOST') || nk.includes('FECHA') || nk==='D' || nk==='D_2') continue;
+    if (nk.includes('DIA') || nk.includes('DURACION')) return String(v).trim();
+  }
+  return '—';
+}
+function guessTarjeta(row) {
+  return valNames(row, ['TARJETA','NO TARJETA','NO. TARJETA','N° TARJETA','NUMERO DE TARJETA','NÚMERO DE TARJETA','TARJETA DE ASISTENCIA','NUM TARJETA','NOMINA','NÓMINA','NO NOMINA','NO. NOMINA']) || '—';
+}
+function findPersonTarjeta(p) {
+  for (const sheets of Object.values(p.fuentes||{}))
+    for (const recs of Object.values(sheets||{}))
+      for (const row of (recs||[])) { const t = guessTarjeta(row); if (t && t!=='—') return t; }
+  return '—';
+}
+
+const MESES_FAC = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+
+function cleanFacVal(v) {
+  if (!v) return '';
+  let s = String(v).trim();
+  if (!s || s==='.' || s==='}' || /^\s+$/.test(s)) return '';
+  if (isISODate(s)) return fmtDate(s);
   return s.replace(/\\/g,'/').replace(/,\s*$/,'').trim();
 }
-function advMonthIndexFromName(mes){
-  const i=FAC_MESES.indexOf(advNorm(mes));
-  return i>=0?i:null;
-}
-function advParseMonthField(key){
-  const nk=advNorm(key);
-  if(!nk.includes('FACILIDADES ADMINISTRATIVAS')) return null;
-  const mes=FAC_MESES.find(m=>nk.includes(m));
-  const anio=(nk.match(/(20\d{2})/)||[])[1];
-  if(!mes||!anio) return null;
-  return {mes, mesIndex:FAC_MESES.indexOf(mes), anio};
-}
-function advOutTime(v){
-  if(v===null||v===undefined||String(v).trim()==='') return '—';
-  const s=String(v).trim();
-  return isExcelTime(s)?fmtTime(s):s;
-}
-function advExpandEventos(valor, mesIndexFallback=null, anioFallback=''){
-  const v=advClean(valor);
-  if(!v) return [];
-  if(/^\d{4}-\d{2}-\d{2}/.test(v)) return [fmtDate(v)];
-  if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v)){
-    const [d,m,y]=v.split('/');
-    return [`${pad(d)}/${pad(m)}/${y}`];
-  }
-  const match=v.match(/^(.+)\/(\d{1,2})\/(\d{4})$/);
-  const eventos=[];
-  let diasPart='', mm='', yr='';
-  if(match){
-    diasPart=match[1].trim();
-    mm=pad(match[2]);
-    yr=match[3];
-  }else if(mesIndexFallback!==null && /\d/.test(v)){
-    diasPart=v;
-    mm=String(mesIndexFallback+1).padStart(2,'0');
-    yr=String(anioFallback||new Date().getFullYear());
-  }else{
-    return [v];
-  }
-  diasPart.split('/').forEach(token=>{
-    token=token.trim();
-    if(!token) return;
-    if(token.includes('-')){
-      const partes=token.split('-').map(x=>x.trim()).filter(Boolean);
-      if(partes.length===2) eventos.push(`${pad(partes[0])}-${pad(partes[1])}/${mm}/${yr}`);
-      else eventos.push(`${token}/${mm}/${yr}`);
-    }else if(token.includes(',')){
-      token.split(',').map(x=>x.trim()).filter(Boolean).forEach(d=>eventos.push(`${pad(d)}/${mm}/${yr}`));
-    }else{
-      eventos.push(`${pad(token)}/${mm}/${yr}`);
+function expandFac(v) {
+  v = cleanFacVal(v); if (!v) return [];
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v)) { const[d,m,y]=v.split('/'); return [`${pad(d)}/${pad(m)}/${y}`]; }
+  const match = v.match(/^(.+)\/(\d{1,2})\/(\d{4})$/);
+  if (!match) return [v];
+  const mm = pad(match[2]), yr = match[3], out = [];
+  match[1].split('/').forEach(tok => {
+    tok = tok.trim(); if (!tok) return;
+    if (tok.includes('-')) {
+      const [a,b] = tok.split('-').map(x=>x.trim()).filter(Boolean);
+      out.push(a&&b ? `${pad(a)}-${pad(b)}/${mm}/${yr}` : `${tok}/${mm}/${yr}`);
+    } else if (tok.includes(',')) {
+      tok.split(',').map(x=>x.trim()).filter(Boolean).forEach(d => out.push(`${pad(d)}/${mm}/${yr}`));
+    } else {
+      out.push(`${pad(tok)}/${mm}/${yr}`);
     }
   });
-  return eventos.length?eventos:[v];
+  return out.length ? out : [v];
 }
-function advBuildEventos(){
-  const eventos=[];
-  if(!DB) return eventos;
-  Object.values(DB).forEach(persona=>{
-    Object.entries(persona.fuentes||{}).forEach(([src,sheets])=>{
-      if(!advIsFacSource(src)) return;
-      Object.entries(sheets||{}).forEach(([sheet,recs])=>{
-        (recs||[]).forEach(row=>{
-          const servicio=String(advValByNames(row,['SERVICIO','AREA','ÁREA','DEPARTAMENTO'])||'—').trim()||'—';
-          const turno=String(advValByNames(row,['TURNO','JORNADA'])||'—').trim()||'—';
-          const entrada=advOutTime(advValByNames(row,['ENTRADA','HORA ENTRADA']));
-          const salida=advOutTime(advValByNames(row,['SALIDA','HORA SALIDA']));
-          Object.keys(row||{}).forEach(k=>{
-            const meta=advParseMonthField(k);
-            if(!meta) return;
-            const dias=advExpandEventos(row[k],meta.mesIndex,meta.anio);
-            dias.forEach(dia=>eventos.push({
-              rfc:persona.rfc||'—', nombre:persona.nombre||'SIN NOMBRE', servicio, turno, entrada, salida,
-              dia, mes:meta.mes, mesIndex:meta.mesIndex, anio:String(meta.anio), sheet
+function facDias(row) {
+  const dias = [];
+  MESES_FAC.forEach(mes => {
+    const key = Object.keys(row||{}).find(k => { const nk=norm(k); return nk.includes('FACILIDADES ADMINISTRATIVAS') && nk.includes(mes) && nk.includes('2026'); });
+    if (key) expandFac(row[key]).forEach(d => dias.push(`${mes}: ${d}`));
+  });
+  return dias;
+}
+function isSrcLicMed(src) { const n=norm(src); return (n.includes('CONTROL')||n.includes('LICENCIA'))&&!n.includes('LCGS')&&!n.includes('GOCE')&&!n.includes('FACILIDAD'); }
+function isSrcLCGS(src)   { const n=norm(src); return n.includes('LCGS')||n.includes('GOCE'); }
+function isSrcFac(src)    { return norm(src).includes('FACILIDAD'); }
+
+/* ═══════════════════════════════════════════════════════════
+   PDF INDIVIDUAL
+═══════════════════════════════════════════════════════════ */
+async function genPDF() {
+  if (!cur || !DB[cur]) return;
+  const p = DB[cur], { jsPDF } = window.jspdf;
+  const doc = new jsPDF('portrait','mm','a4');
+  const generated = new Date().toLocaleString('es-MX');
+  const tarjeta   = findPersonTarjeta(p);
+
+  const licencias=[], lcgs=[], facilidades=[];
+
+  Object.entries(p.fuentes||{}).forEach(([src,sheets]) => Object.values(sheets||{}).forEach(recs => (recs||[]).forEach(r => {
+    if (isSrcLicMed(src)) {
+      const diagnostico = firstVal(r, [['DIAGNOSTICO','DIAGNÓSTICO','DIAGNOSTICO_2','DIAGNÓSTICO_2'],'DIAGNOSTICO']);
+      const dias = guessDias(r);
+      const d=valNames(r,['D']), m=valNames(r,['M']), a=valNames(r,['A']);
+      const d2=valNames(r,['D_2']), m2=valNames(r,['M_2']), a2=valNames(r,['A_2'])||a;
+      const inicio   = (d||m||a)  ? `${d||'--'}/${m||'--'}/${a||'--'}`   : outDate(firstVal(r,[['FECHA'],['FECHA DE INICIO'],['INICIO']]));
+      const termino  = (d2||m2||a2) ? `${d2||'--'}/${m2||'--'}/${a2||'--'}` : outDate(firstVal(r,[['FECHA_2'],['FECHA DE TERMINO'],['FECHA TERMINO'],['TERMINO'],['TÉRMINO']]));
+      if (hasData([diagnostico,dias]) || /\d/.test(String(inicio)) || /\d/.test(String(termino)))
+        licencias.push([diagnostico, inicio, termino, dias]);
+
+    } else if (isSrcLCGS(src)) {
+      const row = [
+        firstVal(r,[['CONSECUTIVO','NO.','NUMERO','NÚMERO','FOLIO']]),
+        guessDias(r),
+        outDate(firstVal(r,[['FECHA DE INICIO','FECHA INICIO','INICIO']])),
+        outDate(firstVal(r,[['FECHA DE TERMINO','FECHA DE TÉRMINO','FECHA TERMINO','FECHA TÉRMINO','TERMINO','TÉRMINO']])),
+        firstVal(r,[['TURNO','TURNO ','JORNADA'],'TURNO'])
+      ];
+      if (hasData(row)) lcgs.push(row);
+
+    } else if (isSrcFac(src)) {
+      const tarj    = guessTarjeta(r);
+      const servicio= firstVal(r,[['SERVICIO','ÁREA','AREA']]);
+      const turno   = firstVal(r,[['TURNO','TURNO ','JORNADA'],'TURNO']);
+      const entrada = outTime(firstVal(r,[['ENTRADA','HORA ENTRADA']]));
+      const salida  = outTime(firstVal(r,[['SALIDA','HORA SALIDA']]));
+      const dias    = facDias(r);
+      if (dias.length) dias.forEach(dia => facilidades.push([tarj, servicio, turno, entrada, salida, dia]));
+      else if (hasData([servicio,turno,entrada,salida])) facilidades.push([tarj, servicio, turno, entrada, salida, '—']);
+    }
+  })));
+
+  const total = licencias.length + lcgs.length + facilidades.length;
+  PDF.header(doc, 'Reporte Integral de Licencias', 'Hospital de la Mujer · Control administrativo individual', generated);
+  let y = 38;
+  y = PDF.personCard(doc, y, p, tarjeta);
+
+  // KPIs
+  PDF.kpi(doc, 14, y, 42, 'LICENCIAS',   licencias.length,  'Médicas',            PDF.navy);
+  PDF.kpi(doc, 60, y, 42, 'LCGS',        lcgs.length,       'Goce de sueldo',     PDF.teal);
+  PDF.kpi(doc,106, y, 42, 'FACILIDADES', facilidades.length,'Administrativas',    PDF.amber);
+  PDF.kpi(doc,152, y, 44, 'TOTAL',       total,             'Registros',          PDF.slate);
+  y += 36;
+
+  PDF.fill(doc, PDF.soft); PDF.draw(doc, PDF.border);
+  doc.roundedRect(14, y, 182, 18, 3, 3, 'FD');
+  PDF.text(doc, 'Los registros se distinguen por color. Las tablas largas repiten encabezado al paginar.', 18, y+7, { size:7, color:PDF.muted });
+  PDF.text(doc, `Tarjeta/Nómina: ${tarjeta}`, 18, y+14, { size:7.5, bold:true, color:PDF.navy });
+  y += 26;
+
+  const opts = { generated, pageTitle:'Reporte Integral de Licencias' };
+
+  if (licencias.length) {
+    y = PDF.ensure(doc, y, 50, generated, 'Reporte Integral de Licencias', 'Continuación · Licencias Médicas');
+    y = PDF.section(doc, 'Licencias Médicas', y, PDF.navy);
+    y = PDF.table(doc, y, ['Diagnóstico','Inicio','Término','# Días'], licencias, { ...opts, pageSub:'Continuación · Licencias Médicas', headColor:PDF.navy, columnStyles:{ 0:{cellWidth:88}, 1:{cellWidth:32,halign:'center'}, 2:{cellWidth:32,halign:'center'}, 3:{cellWidth:22,halign:'center'} } });
+  }
+  if (lcgs.length) {
+    y = PDF.ensure(doc, y, 50, generated, 'Reporte Integral de Licencias', 'Continuación · LCGS');
+    y = PDF.section(doc, 'Licencias con Goce de Sueldo', y, PDF.teal);
+    y = PDF.table(doc, y, ['Consecutivo','# Días','Inicio','Término','Turno'], lcgs, { ...opts, pageSub:'Continuación · LCGS', headColor:PDF.teal, columnStyles:{ 0:{cellWidth:30,halign:'center'}, 1:{cellWidth:20,halign:'center'}, 2:{cellWidth:36,halign:'center'}, 3:{cellWidth:36,halign:'center'}, 4:{cellWidth:54} } });
+  }
+  if (facilidades.length) {
+    y = PDF.ensure(doc, y, 50, generated, 'Reporte Integral de Licencias', 'Continuación · Facilidades');
+    y = PDF.section(doc, 'Facilidades Administrativas', y, PDF.amber);
+    y = PDF.table(doc, y, ['Tarjeta','Servicio','Turno','Entrada','Salida','Día de facilidad'], facilidades, { ...opts, pageSub:'Continuación · Facilidades', headColor:PDF.amber, columnStyles:{ 0:{cellWidth:20,halign:'center'}, 1:{cellWidth:38}, 2:{cellWidth:24,halign:'center'}, 3:{cellWidth:18,halign:'center'}, 4:{cellWidth:18,halign:'center'}, 5:{cellWidth:58} } });
+  }
+  if (!total) PDF.noData(doc, y, 'No se encontraron registros para esta persona');
+
+  PDF.footer(doc, generated);
+  doc.save(`REPORTE_${PDF.safeName(p.nombre||p.rfc)}.pdf`);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PDF GLOBAL MENSUAL
+═══════════════════════════════════════════════════════════ */
+async function genReporteGlobalFacMes(mesIndex = new Date().getMonth(), anio = new Date().getFullYear()) {
+  if (!DB) { alert('Espera a que cargue la base de datos.'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc       = new jsPDF('landscape','mm','a4');
+  const generated = new Date().toLocaleString('es-MX');
+  const mesNombre = MESES_FAC[mesIndex];
+  const anioStr   = String(anio);
+
+  const detalle=[], porPersona=new Map(), porServicio=new Map(), porTurno=new Map();
+  Object.values(DB).forEach(persona => {
+    Object.entries(persona.fuentes||{}).forEach(([src,sheets]) => {
+      if (!isSrcFac(src)) return;
+      Object.values(sheets||{}).forEach(recs => (recs||[]).forEach(row => {
+        const campo = Object.keys(row||{}).find(k => { const nk=norm(k); return nk.includes('FACILIDADES ADMINISTRATIVAS') && nk.includes(mesNombre) && nk.includes(anioStr); });
+        if (!campo) return;
+        const dias = expandFac(row[campo]); if (!dias.length) return;
+        const servicio = String(valNames(row,['SERVICIO','ÁREA','AREA'])||'—').trim()||'—';
+        const turno    = String(valNames(row,['TURNO','JORNADA'])||'—').trim()||'—';
+        const entrada  = outTime(valNames(row,['ENTRADA','HORA ENTRADA']));
+        const salida   = outTime(valNames(row,['SALIDA','HORA SALIDA']));
+        dias.forEach(dia => {
+          detalle.push([persona.rfc||'—', persona.nombre||'SIN NOMBRE', servicio, turno, entrada, salida, dia]);
+          const pk = `${persona.rfc} — ${persona.nombre}`;
+          porPersona.set(pk,(porPersona.get(pk)||0)+1);
+          porServicio.set(servicio,(porServicio.get(servicio)||0)+1);
+          porTurno.set(turno,(porTurno.get(turno)||0)+1);
+        });
+      }));
+    });
+  });
+
+  const total    = detalle.length;
+  const personas = porPersona.size;
+  const servicios= porServicio.size;
+  const turnos   = porTurno.size;
+  const arrS = Array.from(porServicio.entries()).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'es'));
+  const arrP = Array.from(porPersona.entries()).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'es'));
+  const arrT = Array.from(porTurno.entries()).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'es'));
+
+  PDF.header(doc, `Reporte global de facilidades · ${mesNombre} ${anioStr}`, 'Hospital de la Mujer · Resumen mensual', generated);
+  PDF.kpi(doc, 14, 40, 56, 'FACILIDADES', total,                             'Eventos',       PDF.amber);
+  PDF.kpi(doc, 75, 40, 56, 'PERSONAS',    personas,                          'RFC únicos',    PDF.navy);
+  PDF.kpi(doc,136, 40, 56, 'ÁREAS',       servicios,                         'Servicios',     PDF.teal);
+  PDF.kpi(doc,197, 40, 55, 'PROM.',       personas?(total/personas).toFixed(1):'0','Por persona', PDF.slate);
+
+  PDF.hBar(doc,{x:14,  y:76, w:136, h:58, title:'Top áreas / servicios',    data:arrS, total, color:PDF.teal,  limit:5, labelW:60});
+  PDF.hBar(doc,{x:158, y:76, w:129, h:58, title:'Personas con más facilidades', data:arrP, total, color:PDF.navy,  limit:5, labelW:74});
+  PDF.hBar(doc,{x:14, y:142, w:130, h:44, title:'Distribución por turno',   data:arrT, total, color:PDF.slate, limit:4, labelW:44});
+
+  PDF.fill(doc, PDF.soft); PDF.draw(doc, PDF.border);
+  doc.roundedRect(152,142,135,44,4,4,'FD');
+  PDF.text(doc,'Lectura rápida',158,150,{size:8.5, bold:true});
+  PDF.wrap(doc, `Mes: ${mesNombre} ${anioStr}. Total: ${total}. Área con mayor carga: ${arrS[0]?.[0]||'—'} (${arrS[0]?.[1]||0}).`, 158, 158, 122, {size:7});
+
+  if (!detalle.length) PDF.noData(doc, 194, 'No hay facilidades registradas para este mes');
+  else {
+    doc.addPage('landscape');
+    PDF.header(doc,'Detalle global de facilidades','Hospital de la Mujer · Registros del mes seleccionado',generated);
+    PDF.table(doc,40,['#','RFC','Nombre','Área / servicio','Turno','Entrada','Salida','Día'],detalle.map((r,i)=>[i+1,...r]),{generated,pageTitle:'Detalle global',pageSub:'Continuación',fontSize:6.5,headColor:PDF.amber,columnStyles:{0:{cellWidth:10,halign:'center'},1:{cellWidth:26},2:{cellWidth:62},3:{cellWidth:58},4:{cellWidth:24,halign:'center'},5:{cellWidth:18,halign:'center'},6:{cellWidth:18,halign:'center'},7:{cellWidth:50}},margin:{left:14,right:14,bottom:18,top:40}});
+  }
+
+  PDF.footer(doc, generated);
+  doc.save(`REPORTE_GLOBAL_FACILIDADES_${mesNombre}_${anioStr}.pdf`);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   REPORTES AVANZADOS (UI + PDF + CSV)
+═══════════════════════════════════════════════════════════ */
+function advParseMonthField(key) {
+  const nk = norm(key);
+  if (!nk.includes('FACILIDADES ADMINISTRATIVAS')) return null;
+  const mes  = MESES_FAC.find(m => nk.includes(m));
+  const anio = (nk.match(/(20\d{2})/)||[])[1];
+  if (!mes || !anio) return null;
+  return { mes, mesIndex: MESES_FAC.indexOf(mes), anio };
+}
+function buildEventos() {
+  const eventos = [];
+  if (!DB) return eventos;
+  Object.values(DB).forEach(persona => {
+    Object.entries(persona.fuentes||{}).forEach(([src,sheets]) => {
+      if (!isSrcFac(src)) return;
+      Object.entries(sheets||{}).forEach(([,recs]) => {
+        (recs||[]).forEach(row => {
+          const servicio = String(valNames(row,['SERVICIO','AREA','ÁREA','DEPARTAMENTO'])||'—').trim()||'—';
+          const turno    = String(valNames(row,['TURNO','JORNADA'])||'—').trim()||'—';
+          const entrada  = outTime(valNames(row,['ENTRADA','HORA ENTRADA']));
+          const salida   = outTime(valNames(row,['SALIDA','HORA SALIDA']));
+          Object.keys(row||{}).forEach(k => {
+            const meta = advParseMonthField(k); if (!meta) return;
+            expandFac(row[k]).forEach(dia => eventos.push({
+              rfc:persona.rfc||'—', nombre:persona.nombre||'SIN NOMBRE',
+              servicio, turno, entrada, salida,
+              dia, mes:meta.mes, mesIndex:meta.mesIndex, anio:String(meta.anio)
             }));
           });
         });
@@ -1954,703 +1322,237 @@ function advBuildEventos(){
   });
   return eventos;
 }
-function advUniq(arr,key){return Array.from(new Set(arr.map(x=>x[key]).filter(Boolean)));}
-function advApplyFilters(eventos){
-  const get=id=>document.getElementById(id)?.value||'TODOS';
-  const persona=get('advPersona'), mes=get('advMes'), anio=get('advAnio'), servicio=get('advServicio'), turno=get('advTurno'), q=(document.getElementById('advQ')?.value||'').trim().toUpperCase();
-  return eventos.filter(e=>{
-    if(persona!=='TODOS' && e.rfc!==persona) return false;
-    if(mes!=='TODOS' && String(e.mesIndex)!==mes) return false;
-    if(anio!=='TODOS' && e.anio!==anio) return false;
-    if(servicio!=='TODOS' && e.servicio!==servicio) return false;
-    if(turno!=='TODOS' && e.turno!==turno) return false;
-    if(q && !(e.rfc.toUpperCase().includes(q)||e.nombre.toUpperCase().includes(q)||e.servicio.toUpperCase().includes(q))) return false;
+function countMap(rows, keyFn) {
+  const m = new Map();
+  rows.forEach(r => { const k=keyFn(r)||'—'; m.set(k,(m.get(k)||0)+1); });
+  return Array.from(m.entries()).sort((a,b)=>b[1]-a[1]||String(a[0]).localeCompare(String(b[0]),'es'));
+}
+function pct(n, total) { return total ? (n/total*100) : 0; }
+
+function applyFilters(eventos) {
+  const g = id => document.getElementById(id)?.value||'TODOS';
+  const persona=g('advPersona'), mes=g('advMes'), anio=g('advAnio'), servicio=g('advServicio'), turno=g('advTurno');
+  const q = (document.getElementById('advQ')?.value||'').trim().toUpperCase();
+  return eventos.filter(e => {
+    if (persona!=='TODOS' && e.rfc!==persona) return false;
+    if (mes!=='TODOS' && String(e.mesIndex)!==mes) return false;
+    if (anio!=='TODOS' && e.anio!==anio) return false;
+    if (servicio!=='TODOS' && e.servicio!==servicio) return false;
+    if (turno!=='TODOS' && e.turno!==turno) return false;
+    if (q && !(e.rfc.toUpperCase().includes(q)||e.nombre.toUpperCase().includes(q)||e.servicio.toUpperCase().includes(q))) return false;
     return true;
   });
 }
-function advCountMap(rows,keyFn){
-  const m=new Map();
-  rows.forEach(r=>{const k=keyFn(r)||'—';m.set(k,(m.get(k)||0)+1);});
-  return Array.from(m.entries()).sort((a,b)=>b[1]-a[1]||String(a[0]).localeCompare(String(b[0]),'es'));
+function fillSelect(id, values, labelAll = 'Todos') {
+  const el = document.getElementById(id); if (!el) return;
+  const current = el.value || 'TODOS';
+  el.innerHTML = `<option value="TODOS">${labelAll}</option>` + values.map(v=>`<option value="${esc(v.value)}">${esc(v.label)}</option>`).join('');
+  if (Array.from(el.options).some(o=>o.value===current)) el.value = current;
 }
-function advPct(n,total){return total?((n/total)*100):0;}
-function advBarList(title, rows, total, limit=12){
-  const shown=rows.slice(0,limit);
-  if(!shown.length) return `<div class="adv-card"><div class="adv-card-h"><h3>${title}</h3><span>0</span></div><div class="empty-adv">Sin datos</div></div>`;
-  return `<div class="adv-card"><div class="adv-card-h"><h3>${title}</h3><span>${shown.length} conceptos</span></div><div class="bar-list">`+
-    shown.map(([name,count])=>{
-      const pct=advPct(count,total);
-      return `<div class="bar-row" title="${esc(name)}: ${count} (${pct.toFixed(1)}%)">
-        <div class="bar-name">${esc(name)}</div>
-        <div class="bar-track"><div class="bar-fill" style="width:${Math.max(pct,2)}%"></div></div>
-        <div class="bar-val">${count} · ${pct.toFixed(1)}%</div>
-      </div>`;
-    }).join('')+`</div></div>`;
-}
-function advFillSelect(id, values, labelAll='Todos'){
-  const el=document.getElementById(id); if(!el) return;
-  const current=el.value||'TODOS';
-  el.innerHTML=`<option value="TODOS">${labelAll}</option>`+values.map(v=>`<option value="${esc(v.value)}">${esc(v.label)}</option>`).join('');
-  if(Array.from(el.options).some(o=>o.value===current)) el.value=current;
-}
-function openReporteFacilidadesAvanzado(){
-  if(!DB){alert('Primero espera a que cargue la base de datos.');return;}
-  const rp=document.getElementById('rp');
-  document.getElementById('em').style.display='none';
+
+function openReporteFacilidadesAvanzado() {
+  if (!DB) { alert('Espera a que cargue la base de datos.'); return; }
+  const rp = document.getElementById('rp');
+  document.getElementById('em').style.display = 'none';
   rp.classList.add('on');
-  const eventos=advBuildEventos();
-  const personas=Array.from(new Map(eventos.map(e=>[e.rfc,{value:e.rfc,label:`${e.rfc} — ${e.nombre}` }])).values()).sort((a,b)=>a.label.localeCompare(b.label,'es'));
-  const anios=advUniq(eventos,'anio').sort().map(y=>({value:y,label:y}));
-  const servicios=advUniq(eventos,'servicio').sort((a,b)=>a.localeCompare(b,'es')).map(x=>({value:x,label:x}));
-  const turnos=advUniq(eventos,'turno').sort((a,b)=>a.localeCompare(b,'es')).map(x=>({value:x,label:x}));
-  rp.innerHTML=`<div class="adv-wrap">
+
+  const eventos  = buildEventos();
+  const personas = Array.from(new Map(eventos.map(e=>[e.rfc,{value:e.rfc,label:`${e.rfc} — ${e.nombre}`}])).values()).sort((a,b)=>a.label.localeCompare(b.label,'es'));
+  const anios    = [...new Set(eventos.map(e=>e.anio))].sort().map(y=>({value:y,label:y}));
+  const servicios= [...new Set(eventos.map(e=>e.servicio))].sort((a,b)=>a.localeCompare(b,'es')).map(x=>({value:x,label:x}));
+  const turnos   = [...new Set(eventos.map(e=>e.turno))].sort((a,b)=>a.localeCompare(b,'es')).map(x=>({value:x,label:x}));
+
+  rp.innerHTML = `<div class="adv-wrap">
     <div class="adv-head">
-      <div class="adv-title"><h2>Reportes avanzados de facilidades administrativas</h2><p>Filtra por persona, mes, año, servicio o turno. El conteo respeta la regla: <b>12/15/05/2026 = 2 facilidades</b> y <b>12-15/05/2026 = 1 facilidad</b>.</p></div>
-      <div class="adv-actions"><button class="adv-btn" onclick="genPDFReporteFacilidadesAvanzado()">Descargar PDF filtrado</button><button class="adv-btn secondary" onclick="exportCSVReporteFacilidades()">Exportar CSV</button></div>
+      <div class="adv-title">
+        <h2>Reportes avanzados · Facilidades administrativas</h2>
+        <p>Filtra por persona, mes, año, servicio o turno. Conteo correcto: <b>12/15/05/2026 = 2 facilidades</b>, <b>12-15/05/2026 = 1 facilidad</b>.</p>
+      </div>
+      <div class="adv-actions">
+        <button class="btn" onclick="genPDFAvanzado()">⬇ PDF filtrado</button>
+        <button class="btn sec" onclick="exportCSV()">CSV</button>
+      </div>
     </div>
     <div class="adv-filters">
       <div class="adv-field"><label>Persona</label><select id="advPersona"></select></div>
-      <div class="adv-field"><label>Mes</label><select id="advMes"><option value="TODOS">Todos</option>${FAC_MESES.map((m,i)=>`<option value="${i}">${m}</option>`).join('')}</select></div>
+      <div class="adv-field"><label>Mes</label><select id="advMes"><option value="TODOS">Todos</option>${MESES_FAC.map((m,i)=>`<option value="${i}">${m}</option>`).join('')}</select></div>
       <div class="adv-field"><label>Año</label><select id="advAnio"></select></div>
       <div class="adv-field"><label>Área / servicio</label><select id="advServicio"></select></div>
       <div class="adv-field"><label>Turno</label><select id="advTurno"></select></div>
-      <div class="adv-field"><label>Buscar</label><input id="advQ" placeholder="RFC, nombre o servicio"></div>
+      <div class="adv-field"><label>Buscar</label><input id="advQ" placeholder="RFC, nombre o servicio…"></div>
     </div>
     <div id="advResult"></div>
   </div>`;
-  advFillSelect('advPersona',personas,'Todas las personas');
-  advFillSelect('advAnio',anios,'Todos los años');
-  advFillSelect('advServicio',servicios,'Todas las áreas');
-  advFillSelect('advTurno',turnos,'Todos los turnos');
-  // preseleccionar mes y año actuales si existen
-  const now=new Date();
-  const mesSel=document.getElementById('advMes');
-  const anioSel=document.getElementById('advAnio');
-  if(eventos.some(e=>e.mesIndex===now.getMonth())) mesSel.value=String(now.getMonth());
-  if(eventos.some(e=>e.anio===String(now.getFullYear()))) anioSel.value=String(now.getFullYear());
-  ['advPersona','advMes','advAnio','advServicio','advTurno','advQ'].forEach(id=>document.getElementById(id).addEventListener(id==='advQ'?'input':'change',renderReporteFacilidadesAvanzado));
-  renderReporteFacilidadesAvanzado();
-}
-function renderReporteFacilidadesAvanzado(){
-  const all=advBuildEventos();
-  const rows=advApplyFilters(all);
-  const total=rows.length;
-  const personas=new Set(rows.map(r=>r.rfc)).size;
-  const servicios=new Set(rows.map(r=>r.servicio)).size;
-  const turnos=new Set(rows.map(r=>r.turno)).size;
-  const porServicio=advCountMap(rows,r=>r.servicio);
-  const porTurno=advCountMap(rows,r=>r.turno);
-  const porMes=advCountMap(rows,r=>`${r.mes} ${r.anio}`);
-  const porPersona=advCountMap(rows,r=>`${r.rfc} — ${r.nombre}`);
-  const topServicio=porServicio[0]||['—',0];
-  const topPct=advPct(topServicio[1],total);
-  const result=document.getElementById('advResult'); if(!result) return;
-  result.innerHTML=`<div class="kpi-grid">
-    <div class="kpi"><div class="kpi-num">${total}</div><div class="kpi-lbl">Facilidades otorgadas</div><div class="kpi-sub">Eventos reales filtrados</div></div>
-    <div class="kpi"><div class="kpi-num">${personas}</div><div class="kpi-lbl">Personas con facilidad</div><div class="kpi-sub">RFC únicos</div></div>
-    <div class="kpi"><div class="kpi-num">${servicios}</div><div class="kpi-lbl">Áreas involucradas</div><div class="kpi-sub">Servicios distintos</div></div>
-    <div class="kpi"><div class="kpi-num">${personas?(total/personas).toFixed(1):'0'}</div><div class="kpi-lbl">Promedio por persona</div><div class="kpi-sub">Facilidades/persona</div></div>
-    <div class="kpi"><div class="kpi-num">${topPct.toFixed(1)}%</div><div class="kpi-lbl">Área con mayor carga</div><div class="kpi-sub">${esc(topServicio[0])}</div></div>
-  </div>
-  <div class="adv-grid">
-    ${advBarList('Porcentaje por área / servicio',porServicio,total,15)}
-    ${advBarList('Distribución por turno',porTurno,total,10)}
-    ${advBarList('Comportamiento por mes',porMes,total,18)}
-    ${advBarList('Personas con más facilidades',porPersona,total,12)}
-  </div>
-  <div class="adv-card">
-    <div class="adv-card-h"><h3>Detalle filtrado</h3><span>${total} filas</span></div>
-    ${total?`<div class="adv-table-wrap"><table><thead><tr><th>#</th><th>RFC</th><th>Nombre</th><th>Área</th><th>Turno</th><th>Entrada</th><th>Salida</th><th>Día</th><th>Mes</th><th>Año</th></tr></thead><tbody>`+
-      rows.sort((a,b)=>a.nombre.localeCompare(b.nombre,'es')||a.anio.localeCompare(b.anio)||a.mesIndex-b.mesIndex||a.dia.localeCompare(b.dia,'es')).map((r,i)=>`<tr><td class="rn">${i+1}</td><td>${esc(r.rfc)}</td><td>${esc(r.nombre)}</td><td>${esc(r.servicio)}</td><td>${esc(r.turno)}</td><td class="tc">${esc(r.entrada)}</td><td class="tc">${esc(r.salida)}</td><td class="dc">${esc(r.dia)}</td><td>${esc(r.mes)}</td><td>${esc(r.anio)}</td></tr>`).join('')+
-      `</tbody></table></div>`:`<div class="empty-adv">No hay resultados con los filtros seleccionados.</div>`}
-    <div class="adv-note">Tip: para analizar todo un año, deja el mes en “Todos” y selecciona solo el año. Para revisar una persona específica, selecciona su RFC en el filtro Persona.</div>
-  </div>`;
-}
-function advGetFilteredRows(){return advApplyFilters(advBuildEventos());}
-function advFilterText(){
-  const txt=[];
-  const vals=[['Persona','advPersona'],['Mes','advMes'],['Año','advAnio'],['Área','advServicio'],['Turno','advTurno']];
-  vals.forEach(([lbl,id])=>{const el=document.getElementById(id); if(el&&el.value!=='TODOS') txt.push(`${lbl}: ${el.options[el.selectedIndex].text}`);});
-  const q=document.getElementById('advQ')?.value.trim(); if(q) txt.push(`Búsqueda: ${q}`);
-  return txt.length?txt.join(' · '):'Todos los registros';
-}
-function pdfWrapText(doc,text,x,y,maxWidth,lineHeight=4){
-  const lines=doc.splitTextToSize(String(text||''),maxWidth);
-  doc.text(lines,x,y);
-  return y + (lines.length*lineHeight);
-}
-function pdfStatCard(doc,x,y,w,h,title,value,sub,accent){
-  doc.setFillColor(31,95,139); doc.roundedRect(x,y,w,h,3,3,'F');
-  doc.setFillColor(accent[0],accent[1],accent[2]); doc.roundedRect(x,y,3,h,2,2,'F');
-  doc.setTextColor(230,238,245); doc.setFontSize(8); doc.text(String(title||''),x+7,y+7);
-  doc.setTextColor(accent[0],accent[1],accent[2]); doc.setFontSize(18); doc.text(String(value||'0'),x+7,y+17);
-  doc.setTextColor(230,238,245); doc.setFontSize(7); pdfWrapText(doc,sub||'',x+7,y+23,w-10,3.2);
-}
-function pdfSectionTitle(doc,title,subtitle,x,y,w){
-  doc.setFillColor(245,246,250); doc.roundedRect(x,y,w,10,2,2,'F');
-  doc.setTextColor(30,35,45); doc.setFontSize(12); doc.text(title,x+4,y+6.5);
-  if(subtitle){ doc.setTextColor(120,128,140); doc.setFontSize(7); doc.text(subtitle,x+w-4,y+6.5,{align:'right'}); }
-}
-function pdfHBarChart(doc,{x,y,w,title,data,total,accent=[31,95,139],limit=6,labelWidth=48,rowH=10}){
-  const items=(data||[]).slice(0,limit);
-  const chartH=Math.max(24, items.length*rowH+10);
-  doc.setFillColor(255,255,255); doc.roundedRect(x,y,w,chartH,3,3,'F');
-  doc.setDrawColor(228,232,238); doc.roundedRect(x,y,w,chartH,3,3,'S');
-  doc.setTextColor(40,45,55); doc.setFontSize(10); doc.text(title,x+4,y+6);
-  if(!items.length){ doc.setTextColor(150,160,175); doc.setFontSize(8); doc.text('Sin datos',x+4,y+15); return y+chartH; }
-  const max=Math.max(...items.map(i=>i[1]),1);
-  let cy=y+12;
-  items.forEach(([name,val])=>{
-    const pct=total?((val/total)*100):0;
-    const truncated = String(name).length>26 ? String(name).slice(0,25)+'…' : String(name);
-    doc.setTextColor(85,95,110); doc.setFontSize(7); doc.text(truncated,x+4,cy+3);
-    const bx=x+labelWidth, bw=w-labelWidth-22;
-    doc.setFillColor(238,241,246); doc.roundedRect(bx,cy,bw,4,2,2,'F');
-    doc.setFillColor(accent[0],accent[1],accent[2]); doc.roundedRect(bx,cy,Math.max(2,(val/max)*bw),4,2,2,'F');
-    doc.setTextColor(70,75,85); doc.setFontSize(7); doc.text(`${val} · ${pct.toFixed(1)}%`,x+w-4,cy+3,{align:'right'});
-    cy+=rowH;
-  });
-  return y+chartH;
-}
-function pdfVBarChart(doc,{x,y,w,title,data,total,accent=[31,95,139],limit=8}){
-  const items=(data||[]).slice(0,limit);
-  const h=58;
-  doc.setFillColor(255,255,255); doc.roundedRect(x,y,w,h,3,3,'F');
-  doc.setDrawColor(228,232,238); doc.roundedRect(x,y,w,h,3,3,'S');
-  doc.setTextColor(40,45,55); doc.setFontSize(10); doc.text(title,x+4,y+6);
-  if(!items.length){ doc.setTextColor(150,160,175); doc.setFontSize(8); doc.text('Sin datos',x+4,y+15); return y+h; }
-  const max=Math.max(...items.map(i=>i[1]),1);
-  const baseY=y+h-10;
-  const left=x+8;
-  const chartW=w-14;
-  const gap=3;
-  const bw=Math.max(6,(chartW - gap*(items.length-1))/items.length);
-  items.forEach(([name,val],idx)=>{
-    const bh=((val/max)*28)+2;
-    const bx=left+idx*(bw+gap);
-    doc.setFillColor(accent[0],accent[1],accent[2]); doc.roundedRect(bx,baseY-bh,bw,bh,1,1,'F');
-    doc.setTextColor(70,75,85); doc.setFontSize(6); doc.text(String(val),bx+bw/2,baseY-bh-1,{align:'center'});
-    const short=String(name).split(' ')[0].slice(0,6);
-    doc.setTextColor(110,118,130); doc.text(short,bx+bw/2,baseY+4,{align:'center'});
-  });
-  return y+h;
-}
-function pdfDonutLegend(doc,{x,y,w,title,data,total,colors}){
-  const items=(data||[]).slice(0,5);
-  const h=58;
-  const cx=x+18, cy=y+28, r=13;
-  doc.setFillColor(255,255,255); doc.roundedRect(x,y,w,h,3,3,'F');
-  doc.setDrawColor(228,232,238); doc.roundedRect(x,y,w,h,3,3,'S');
-  doc.setTextColor(40,45,55); doc.setFontSize(10); doc.text(title,x+4,y+6);
-  if(!items.length){ doc.setTextColor(150,160,175); doc.setFontSize(8); doc.text('Sin datos',x+4,y+15); return y+h; }
-  doc.setDrawColor(235,238,243); doc.setFillColor(247,248,250); doc.circle(cx,cy,r,'FD');
-  doc.setFillColor(255,255,255); doc.circle(cx,cy,7,'F');
-  doc.setTextColor(80,85,95); doc.setFontSize(8); doc.text(String(total),cx,cy+1,{align:'center'});
-  let ly=y+14;
-  items.forEach(([name,val],idx)=>{
-    const c=colors[idx%colors.length];
-    const pct=total?((val/total)*100):0;
-    doc.setFillColor(c[0],c[1],c[2]); doc.roundedRect(x+36,ly-2,4,4,1,1,'F');
-    doc.setTextColor(75,85,95); doc.setFontSize(7);
-    const label=String(name).length>18?String(name).slice(0,17)+'…':String(name);
-    doc.text(label,x+43,ly+1);
-    doc.text(`${val} · ${pct.toFixed(1)}%`,x+w-4,ly+1,{align:'right'});
-    ly+=8;
-  });
-  return y+h;
+
+  fillSelect('advPersona', personas, 'Todas las personas');
+  fillSelect('advAnio',    anios,    'Todos los años');
+  fillSelect('advServicio',servicios,'Todas las áreas');
+  fillSelect('advTurno',   turnos,   'Todos los turnos');
+
+  const now = new Date();
+  if (eventos.some(e=>e.mesIndex===now.getMonth())) document.getElementById('advMes').value = String(now.getMonth());
+  if (eventos.some(e=>e.anio===String(now.getFullYear()))) document.getElementById('advAnio').value = String(now.getFullYear());
+
+  ['advPersona','advMes','advAnio','advServicio','advTurno'].forEach(id => document.getElementById(id).addEventListener('change', renderAdvanzado));
+  document.getElementById('advQ').addEventListener('input', renderAdvanzado);
+  renderAdvanzado();
 }
 
-function genPDFReporteFacilidadesAvanzado(){
-  if(!DB){alert('Primero espera a que cargue la base de datos.');return;}
+function renderAdvanzado() {
+  const rows     = applyFilters(buildEventos());
+  const total    = rows.length;
+  const personas = new Set(rows.map(r=>r.rfc)).size;
+  const servicios= new Set(rows.map(r=>r.servicio)).size;
+  const porServicio = countMap(rows, r=>r.servicio);
+  const porTurno    = countMap(rows, r=>r.turno);
+  const porMes      = countMap(rows, r=>`${r.mes} ${r.anio}`);
+  const porPersona  = countMap(rows, r=>`${r.rfc} — ${r.nombre}`);
+  const topS = porServicio[0]||['—',0];
 
-  const rows=advGetFilteredRows().slice().sort((a,b)=>
-    a.nombre.localeCompare(b.nombre,'es') ||
-    a.anio.localeCompare(b.anio) ||
-    a.mesIndex-b.mesIndex ||
-    a.dia.localeCompare(b.dia,'es')
-  );
+  function barList(title, data, t, limit=12) {
+    const shown = data.slice(0,limit);
+    if (!shown.length) return `<div class="adv-card"><div class="adv-card-h"><h3>${title}</h3><span>0</span></div><div class="empty-adv">Sin datos</div></div>`;
+    return `<div class="adv-card"><div class="adv-card-h"><h3>${esc(title)}</h3><span>${shown.length} conceptos</span></div><div class="bar-list">`+
+      shown.map(([name,count])=>{
+        const p = pct(count,t);
+        return `<div class="bar-row" title="${esc(name)}: ${count} (${p.toFixed(1)}%)">
+          <div class="bar-name">${esc(name)}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.max(p,2)}%"></div></div>
+          <div class="bar-val">${count} · ${p.toFixed(1)}%</div>
+        </div>`;
+      }).join('')+`</div></div>`;
+  }
 
+  const result = document.getElementById('advResult'); if (!result) return;
+  result.innerHTML = `
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-num">${total}</div><div class="kpi-lbl">Facilidades otorgadas</div><div class="kpi-sub">Eventos reales filtrados</div></div>
+      <div class="kpi"><div class="kpi-num">${personas}</div><div class="kpi-lbl">Personas con facilidad</div><div class="kpi-sub">RFC únicos</div></div>
+      <div class="kpi"><div class="kpi-num">${servicios}</div><div class="kpi-lbl">Áreas involucradas</div><div class="kpi-sub">Servicios distintos</div></div>
+      <div class="kpi"><div class="kpi-num">${personas?(total/personas).toFixed(1):'0'}</div><div class="kpi-lbl">Promedio por persona</div><div class="kpi-sub">Facilidades/persona</div></div>
+      <div class="kpi"><div class="kpi-num">${pct(topS[1],total).toFixed(1)}%</div><div class="kpi-lbl">Área con mayor carga</div><div class="kpi-sub">${esc(topS[0])}</div></div>
+    </div>
+    <div class="adv-grid">
+      ${barList('Porcentaje por área / servicio', porServicio, total, 15)}
+      ${barList('Distribución por turno', porTurno, total, 10)}
+      ${barList('Comportamiento por mes', porMes, total, 18)}
+      ${barList('Personas con más facilidades', porPersona, total, 12)}
+    </div>
+    <div class="adv-card">
+      <div class="adv-card-h"><h3>Detalle filtrado</h3><span>${total} filas</span></div>
+      ${total ? `<div class="adv-table-wrap"><table><thead><tr><th>#</th><th>RFC</th><th>Nombre</th><th>Área</th><th>Turno</th><th>Entrada</th><th>Salida</th><th>Día</th><th>Mes</th><th>Año</th></tr></thead><tbody>`+
+        rows.sort((a,b)=>a.nombre.localeCompare(b.nombre,'es')||a.anio.localeCompare(b.anio)||a.mesIndex-b.mesIndex||a.dia.localeCompare(b.dia,'es')).map((r,i)=>`
+          <tr><td class="rn">${i+1}</td><td>${esc(r.rfc)}</td><td>${esc(r.nombre)}</td><td>${esc(r.servicio)}</td><td>${esc(r.turno)}</td><td class="tc">${esc(r.entrada)}</td><td class="tc">${esc(r.salida)}</td><td class="dc">${esc(r.dia)}</td><td>${esc(r.mes)}</td><td>${esc(r.anio)}</td></tr>`).join('')+
+        `</tbody></table></div>` : `<div class="empty-adv">No hay resultados con los filtros seleccionados.</div>`}
+      <div class="adv-note">💡 Para analizar un año completo deja el mes en "Todos". Para una persona, selecciona su RFC.</div>
+    </div>`;
+}
+
+/* ── HELPERS FILTRO TEXTO ── */
+function filterText() {
+  const txt = [];
+  [['Persona','advPersona'],['Mes','advMes'],['Año','advAnio'],['Área','advServicio'],['Turno','advTurno']].forEach(([lbl,id]) => {
+    const el = document.getElementById(id);
+    if (el && el.value !== 'TODOS') txt.push(`${lbl}: ${el.options[el.selectedIndex]?.text}`);
+  });
+  const q = document.getElementById('advQ')?.value.trim(); if (q) txt.push(`Búsqueda: ${q}`);
+  return txt.length ? txt.join(' · ') : 'Todos los registros';
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PDF AVANZADO (3 páginas: dashboard, resumen, detalle)
+═══════════════════════════════════════════════════════════ */
+function genPDFAvanzado() {
+  if (!DB) { alert('Espera a que cargue la base de datos.'); return; }
+  const rows = applyFilters(buildEventos()).slice().sort((a,b)=>a.nombre.localeCompare(b.nombre,'es')||a.anio.localeCompare(b.anio)||a.mesIndex-b.mesIndex||a.dia.localeCompare(b.dia,'es'));
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF('landscape');
-
-  const total=rows.length;
-  const personas=new Set(rows.map(r=>r.rfc)).size;
-  const servicios=new Set(rows.map(r=>r.servicio)).size;
-  const turnosCount=new Set(rows.map(r=>r.turno)).size;
-  const promedio=personas?(total/personas).toFixed(1):'0';
-
-  const porServicio=advCountMap(rows,r=>r.servicio);
-  const porTurno=advCountMap(rows,r=>r.turno);
-  const porMes=advCountMap(rows,r=>`${r.mes} ${r.anio}`);
-  const porPersona=advCountMap(rows,r=>`${r.rfc} — ${r.nombre}`);
-
-  const topServicio=porServicio[0]||['—',0];
-  const topPersona=porPersona[0]||['—',0];
+  const doc       = new jsPDF('landscape','mm','a4');
   const generated = new Date().toLocaleString('es-MX');
 
-  // =====================================================
-  // PÁGINA 1: DASHBOARD VISUAL
-  // =====================================================
+  const total    = rows.length;
+  const personas = new Set(rows.map(r=>r.rfc)).size;
+  const servicios= new Set(rows.map(r=>r.servicio)).size;
+  const turnos   = new Set(rows.map(r=>r.turno)).size;
+  const promedio = personas ? (total/personas).toFixed(1) : '0';
+  const porServicio= countMap(rows,r=>r.servicio);
+  const porTurno   = countMap(rows,r=>r.turno);
+  const porMes     = countMap(rows,r=>`${r.mes} ${r.anio}`);
+  const porPersona = countMap(rows,r=>`${r.rfc} — ${r.nombre}`);
+  const topS = porServicio[0]||['—',0];
+  const topP = porPersona[0]||['—',0];
 
-  doc.setFillColor(31,95,139);
-  doc.rect(0,0,297,34,'F');
+  /* PÁG 1: DASHBOARD */
+  PDF.header(doc,'Reporte Avanzado de Facilidades Administrativas','Hospital de la Mujer · Dashboard visual filtrado',generated);
+  PDF.wrap(doc,`Filtros: ${filterText()}`,14,38,268,{size:7});
 
-  doc.setTextColor(255,255,255);
-  doc.setFontSize(18);
-  doc.text('Reporte Avanzado de Facilidades Administrativas',14,15);
+  PDF.kpi(doc, 14, 46, 54, 'FACILIDADES', String(total),   'Eventos reales',   PDF.amber);
+  PDF.kpi(doc, 72, 46, 54, 'PERSONAS',    String(personas),'RFC únicos',       PDF.navy);
+  PDF.kpi(doc,130, 46, 54, 'ÁREAS',       String(servicios),'Servicios',       PDF.teal);
+  PDF.kpi(doc,188, 46, 54, 'TURNOS',      String(turnos),  'Jornadas',         PDF.slate);
+  PDF.kpi(doc,246, 46, 40, 'PROM.',       String(promedio),'Fac./persona',     PDF.navyDk);
 
-  doc.setFontSize(8);
-  pdfWrapText(doc,`Filtros aplicados: ${advFilterText()}`,14,23,205,3.6);
+  PDF.section(doc, 'Resumen visual', 80, PDF.navy);
 
-  doc.setTextColor(170,180,195);
-  doc.text(`Generado: ${generated}`,282,15,{align:'right'});
+  PDF.hBar(doc,{x:14,  y:96, w:136, h:62, title:'Top áreas / servicios',       data:porServicio, total, color:PDF.teal,  limit:5, labelW:60});
+  PDF.hBar(doc,{x:158, y:96, w:129, h:62, title:'Top personas con más facilidades', data:porPersona, total, color:PDF.navy,  limit:5, labelW:76});
+  PDF.hBar(doc,{x:14, y:165, w:130, h:42, title:'Distribución por turno',      data:porTurno,    total, color:PDF.slate, limit:4, labelW:46});
+  PDF.vBar(doc,{x:158,y:165, w:129, h:42, title:'Comportamiento por mes',      data:porMes,      total, color:PDF.amber, limit:10});
 
-  // Tarjetas KPI con más aire
-  pdfStatCard(doc,14,42,50,25,'FACILIDADES',String(total),'Eventos reales filtrados',[31,95,139]);
-  pdfStatCard(doc,68,42,50,25,'PERSONAS',String(personas),'RFC únicos',[31,95,139]);
-  pdfStatCard(doc,122,42,50,25,'ÁREAS',String(servicios),'Servicios distintos',[31,95,139]);
-  pdfStatCard(doc,176,42,50,25,'TURNOS',String(turnosCount),'Turnos encontrados',[122,134,148]);
-  pdfStatCard(doc,230,42,52,25,'PROMEDIO',String(promedio),'Facilidades/persona',[31,95,139]);
+  PDF.fill(doc, PDF.soft); PDF.draw(doc, PDF.border);
+  doc.roundedRect(14,213,268,18,3,3,'FD');
+  PDF.text(doc,'Lectura rápida',18,220,{size:8,bold:true});
+  PDF.text(doc,`Área con mayor carga: ${topS[0]} (${pct(topS[1],total).toFixed(1)}%).  Persona con más eventos: ${topP[0]} (${topP[1]}).`,18,227,{size:7,color:PDF.muted,maxWidth:258});
 
-  pdfSectionTitle(doc,'Resumen visual','Distribución general del periodo filtrado',14,75,268);
-
-  // Dos gráficas grandes arriba
-  pdfHBarChart(doc,{
-    x:14,y:90,w:128,
-    title:'Top áreas / servicios',
-    data:porServicio,total,
-    accent:[31,95,139],
-    limit:6,
-    labelWidth:55,
-    rowH:10
-  });
-
-  pdfHBarChart(doc,{
-    x:154,y:90,w:128,
-    title:'Top personas con más facilidades',
-    data:porPersona,total,
-    accent:[31,95,139],
-    limit:6,
-    labelWidth:72,
-    rowH:10
-  });
-
-  // Abajo, gráficas más anchas para evitar texto pegado
-  pdfHBarChart(doc,{
-    x:14,y:162,w:128,
-    title:'Distribución por turno',
-    data:porTurno,total,
-    accent:[122,134,148],
-    limit:8,
-    labelWidth:42,
-    rowH:9
-  });
-
-  pdfVBarChart(doc,{
-    x:154,y:162,w:128,
-    title:'Comportamiento por mes',
-    data:porMes,total,
-    accent:[31,95,139],
-    limit:10
-  });
-
-  // Lectura rápida separada del footer
-  doc.setFillColor(245,246,250);
-  doc.roundedRect(14,216,268,17,3,3,'F');
-  doc.setTextColor(60,65,75);
-  doc.setFontSize(8);
-  doc.text('Lectura rápida',18,222);
-  doc.setFontSize(7);
-  doc.text(`Área con mayor carga: ${topServicio[0]} (${advPct(topServicio[1],total).toFixed(1)}%).`,18,228);
-  doc.text(`Persona con más eventos: ${topPersona[0]} (${topPersona[1]}).`,150,228,{maxWidth:126});
-
-  // =====================================================
-  // PÁGINA 2: RESUMEN TABULAR MÁS ESPACIADO
-  // =====================================================
-
+  /* PÁG 2: RESUMEN TABULAR */
   doc.addPage('landscape');
-  doc.setFillColor(31,95,139);
-  doc.rect(0,0,297,24,'F');
+  PDF.header(doc,'Resumen tabular',`Filtros: ${filterText()}`,generated);
 
-  doc.setTextColor(255,255,255);
-  doc.setFontSize(16);
-  doc.text('Resumen tabular',14,14);
-
-  doc.setFontSize(8);
-  doc.text(`Filtros: ${advFilterText()}`,14,20);
-
-  doc.setTextColor(0,0,0);
-
-  if(!rows.length){
-    doc.setFontSize(12);
-    doc.text('No hay resultados con los filtros seleccionados.',14,40);
+  if (!rows.length) {
+    PDF.noData(doc,45,'No hay resultados con los filtros seleccionados');
   } else {
-    // Área grande a la izquierda
-    doc.autoTable({
-      startY:32,
-      margin:{left:14},
-      tableWidth:128,
-      head:[['Área / servicio','Total','%']],
-      body:porServicio.map(([k,v])=>[k,v,`${advPct(v,total).toFixed(1)}%`]),
-      styles:{fontSize:7,overflow:'linebreak',cellPadding:2},
-      columnStyles:{0:{cellWidth:88},1:{cellWidth:18,halign:'center'},2:{cellWidth:22,halign:'center'}},
-      headStyles:{fillColor:[31,95,139]}
-    });
+    PDF.table(doc,38,['Área / servicio','Total','%'],porServicio.map(([k,v])=>[k,v,`${pct(v,total).toFixed(1)}%`]),{generated,tableWidth:130,margin:{left:14,right:155,bottom:18,top:40},fontSize:7,headColor:PDF.teal,columnStyles:{0:{cellWidth:90},1:{cellWidth:16,halign:'center'},2:{cellWidth:24,halign:'center'}}});
+    PDF.table(doc,38,['Turno','Total','%'],porTurno.map(([k,v])=>[k,v,`${pct(v,total).toFixed(1)}%`]),{generated,tableWidth:60,margin:{left:156,right:81,bottom:18,top:40},fontSize:7,headColor:PDF.slate,columnStyles:{0:{cellWidth:30},1:{cellWidth:12,halign:'center'},2:{cellWidth:18,halign:'center'}}});
+    PDF.table(doc,38,['Mes','Total','%'],porMes.slice(0,12).map(([k,v])=>[k,v,`${pct(v,total).toFixed(1)}%`]),{generated,tableWidth:60,margin:{left:228,right:14,bottom:18,top:40},fontSize:7,headColor:PDF.amber,columnStyles:{0:{cellWidth:30},1:{cellWidth:12,halign:'center'},2:{cellWidth:18,halign:'center'}}});
 
-    // Turnos arriba derecha
-    doc.autoTable({
-      startY:32,
-      margin:{left:154},
-      tableWidth:58,
-      head:[['Turno','Total','%']],
-      body:porTurno.map(([k,v])=>[k,v,`${advPct(v,total).toFixed(1)}%`]),
-      styles:{fontSize:7,cellPadding:2},
-      columnStyles:{0:{cellWidth:30},1:{cellWidth:12,halign:'center'},2:{cellWidth:16,halign:'center'}},
-      headStyles:{fillColor:[31,95,139]}
-    });
-
-    // Mes arriba derecha
-    doc.autoTable({
-      startY:32,
-      margin:{left:224},
-      tableWidth:58,
-      head:[['Mes','Total','%']],
-      body:porMes.slice(0,12).map(([k,v])=>[k,v,`${advPct(v,total).toFixed(1)}%`]),
-      styles:{fontSize:7,cellPadding:2},
-      columnStyles:{0:{cellWidth:30},1:{cellWidth:12,halign:'center'},2:{cellWidth:16,halign:'center'}},
-      headStyles:{fillColor:[31,95,139]}
-    });
-
-    // Top personas en tabla completa abajo, ya no angosta
-    const bottomY = Math.max(doc.lastAutoTable.finalY + 10, 96);
-    doc.setFontSize(12);
-    doc.setTextColor(35,40,50);
-    doc.text('Top personas con más facilidades',14,bottomY);
-
-    doc.autoTable({
-      startY:bottomY+5,
-      margin:{left:14},
-      tableWidth:268,
-      head:[['#','RFC','Nombre','Total','%']],
-      body:porPersona.slice(0,15).map(([k,v],i)=>{
-        const parts=String(k).split(' — ');
-        return [i+1,parts[0]||'—',parts.slice(1).join(' — ')||'—',v,`${advPct(v,total).toFixed(1)}%`];
-      }),
-      styles:{fontSize:7,overflow:'linebreak',cellPadding:2},
-      columnStyles:{
-        0:{cellWidth:10,halign:'center'},
-        1:{cellWidth:34},
-        2:{cellWidth:170},
-        3:{cellWidth:20,halign:'center'},
-        4:{cellWidth:20,halign:'center'}
-      },
-      headStyles:{fillColor:[122,134,148]}
-    });
+    const bottomY = Math.max(doc.lastAutoTable?.finalY + 14 || 100, 100);
+    PDF.section(doc,'Top personas con más facilidades', bottomY, PDF.navy);
+    PDF.table(doc, bottomY+15, ['#','RFC','Nombre','Total','%'],
+      porPersona.slice(0,15).map(([k,v],i) => { const parts=k.split(' — '); return [i+1,parts[0]||'—',parts.slice(1).join(' — ')||'—',v,`${pct(v,total).toFixed(1)}%`]; }),
+      {generated,tableWidth:268,margin:{left:14,right:14,bottom:18,top:40},fontSize:7,headColor:PDF.navy,columnStyles:{0:{cellWidth:10,halign:'center'},1:{cellWidth:34},2:{cellWidth:170},3:{cellWidth:22,halign:'center'},4:{cellWidth:22,halign:'center'}}});
   }
 
-  // =====================================================
-  // PÁGINAS 3+: DETALLE
-  // =====================================================
-
-  if(rows.length){
+  /* PÁG 3: DETALLE */
+  if (rows.length) {
     doc.addPage('landscape');
-
-    doc.setFillColor(31,95,139);
-    doc.rect(0,0,297,24,'F');
-
-    doc.setTextColor(255,255,255);
-    doc.setFontSize(16);
-    doc.text('Detalle de eventos filtrados',14,14);
-
-    doc.setFontSize(8);
-    doc.text(`Total de filas: ${rows.length}`,14,20);
-
-    doc.setTextColor(0,0,0);
-
-    doc.autoTable({
-      startY:30,
-      head:[['#','RFC','Nombre','Área','Turno','Entrada','Salida','Día','Mes','Año']],
-      body:rows.map((r,i)=>[i+1,r.rfc,r.nombre,r.servicio,r.turno,r.entrada,r.salida,r.dia,r.mes,r.anio]),
-      styles:{fontSize:6,overflow:'linebreak',cellPadding:1.6},
-      columnStyles:{
-        0:{cellWidth:10},
-        1:{cellWidth:24},
-        2:{cellWidth:50},
-        3:{cellWidth:48},
-        4:{cellWidth:20},
-        5:{cellWidth:18},
-        6:{cellWidth:18},
-        7:{cellWidth:28},
-        8:{cellWidth:24},
-        9:{cellWidth:16}
-      },
-      headStyles:{fillColor:[31,95,139]},
-      margin:{bottom:14}
-    });
+    PDF.header(doc,'Detalle de eventos filtrados',`Total de filas: ${rows.length}`,generated);
+    PDF.table(doc,38,['#','RFC','Nombre','Área','Turno','Entrada','Salida','Día','Mes','Año'],
+      rows.map((r,i)=>[i+1,r.rfc,r.nombre,r.servicio,r.turno,r.entrada,r.salida,r.dia,r.mes,r.anio]),
+      {generated,pageTitle:'Detalle de eventos filtrados',pageSub:'Continuación',fontSize:5.8,cellPadding:1.6,headColor:PDF.navy,
+       columnStyles:{0:{cellWidth:9,halign:'center'},1:{cellWidth:24},2:{cellWidth:50},3:{cellWidth:48},4:{cellWidth:20,halign:'center'},5:{cellWidth:17,halign:'center'},6:{cellWidth:17,halign:'center'},7:{cellWidth:28},8:{cellWidth:24},9:{cellWidth:14,halign:'center'}},
+       margin:{left:14,right:14,bottom:18,top:40}});
   }
 
-  // =====================================================
-  // FOOTER MÁS ABAJO Y SIN ENCIMAR CONTENIDO
-  // =====================================================
-
-  const pageCount=doc.internal.getNumberOfPages();
-
-  for(let i=1;i<=pageCount;i++){
-    doc.setPage(i);
-    doc.setFontSize(7);
-    doc.setTextColor(120);
-    doc.text(`Hospital de la Mujer · Generado: ${generated}`,14,205);
-    doc.text(`Página ${i} de ${pageCount}`,282,205,{align:'right'});
-  }
-
+  PDF.footer(doc, generated);
   doc.save(`REPORTE_VISUAL_FACILIDADES_${new Date().toISOString().slice(0,10)}.pdf`);
 }
 
-function exportCSVReporteFacilidades(){
-  const rows=advGetFilteredRows();
-  const headers=['RFC','Nombre','AreaServicio','Turno','Entrada','Salida','Dia','Mes','Anio'];
-  const csv=[headers.join(',')].concat(rows.map(r=>[r.rfc,r.nombre,r.servicio,r.turno,r.entrada,r.salida,r.dia,r.mes,r.anio].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(','))).join('\n');
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob); a.download=`FACILIDADES_FILTRADAS_${new Date().toISOString().slice(0,10)}.csv`; a.click(); URL.revokeObjectURL(a.href);
+/* ═══════════════════════════════════════════════════════════
+   EXPORT CSV
+═══════════════════════════════════════════════════════════ */
+function exportCSV() {
+  const rows = applyFilters(buildEventos());
+  const headers = ['RFC','Nombre','AreaServicio','Turno','Entrada','Salida','Dia','Mes','Anio'];
+  const csv = [headers.join(',')].concat(rows.map(r =>
+    [r.rfc,r.nombre,r.servicio,r.turno,r.entrada,r.salida,r.dia,r.mes,r.anio].map(v => '"'+String(v).replace(/"/g,'""')+'"').join(',')
+  )).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+  a.download = `FACILIDADES_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click(); URL.revokeObjectURL(a.href);
 }
 
-
-
-// =====================================================
-// OVERRIDES PDF MEJORADOS - COPIAR Y PEGAR COMPLETO
-// Mejoras: colores por tipo, gráficas sin cortes, textos truncados, tablas paginadas y footers sin sobreposición.
-// =====================================================
-const PDFX = {
-  navy:[31,95,139], navyDark:[21,67,101], teal:[47,111,99], amber:[174,111,36], slate:[92,104,120],
-  text:[31,41,51], muted:[91,103,118], light:[130,141,155], border:[216,224,234], soft:[246,248,251], white:[255,255,255]
-};
-function pxSize(doc){return {w:doc.internal.pageSize.getWidth(),h:doc.internal.pageSize.getHeight()};}
-function pxFill(doc,c){doc.setFillColor(c[0],c[1],c[2]);}
-function pxTextColor(doc,c){doc.setTextColor(c[0],c[1],c[2]);}
-function pxDraw(doc,c){doc.setDrawColor(c[0],c[1],c[2]);}
-function pxText(doc,t,x,y,o={}){doc.setFont('helvetica',o.style||'normal');doc.setFontSize(o.size||8);pxTextColor(doc,o.color||PDFX.text);const opt={};if(o.align)opt.align=o.align;if(o.maxWidth)opt.maxWidth=o.maxWidth;doc.text(String(t??''),x,y,opt);}
-function pxWrap(doc,t,x,y,w,lineH=3.7,o={}){doc.setFont('helvetica',o.style||'normal');doc.setFontSize(o.size||7);pxTextColor(doc,o.color||PDFX.muted);const lines=doc.splitTextToSize(String(t??''),w);doc.text(lines,x,y);return y+(lines.length*lineH);}
-function pxTrunc(doc,t,w){let s=String(t??'—');if(doc.getTextWidth(s)<=w)return s;while(s.length>1&&doc.getTextWidth(s+'…')>w)s=s.slice(0,-1);return s+'…';}
-function pxHeader(doc,title,subtitle='',meta=''){const {w}=pxSize(doc);pxFill(doc,PDFX.navy);doc.rect(0,0,w,28,'F');pxFill(doc,PDFX.navyDark);doc.rect(0,0,8,28,'F');pxText(doc,title,14,12,{size:15,style:'bold',color:PDFX.white});if(subtitle)pxText(doc,subtitle,14,19,{size:7.5,color:[230,238,245]});if(meta)pxText(doc,meta,w-14,12,{size:7,color:[230,238,245],align:'right'});pxDraw(doc,PDFX.border);doc.setLineWidth(.25);doc.line(14,32,w-14,32);}
-function pxFooter(doc,generated){const pages=doc.internal.getNumberOfPages();for(let i=1;i<=pages;i++){doc.setPage(i);const {w,h}=pxSize(doc);pxDraw(doc,PDFX.border);doc.setLineWidth(.2);doc.line(14,h-12,w-14,h-12);pxText(doc,`Hospital de la Mujer · Generado: ${generated}`,14,h-6,{size:6.8,color:PDFX.light});pxText(doc,`Página ${i} de ${pages}`,w-14,h-6,{size:6.8,color:PDFX.light,align:'right'});}}
-function pxEnsure(doc,y,need,generated,title,subtitle){const {h,w}=pxSize(doc);if(y+need<=h-18)return y;doc.addPage(w>h?'landscape':'portrait');pxHeader(doc,title,subtitle,generated);return 40;}
-function pxSection(doc,title,y,color=PDFX.navy){const {w}=pxSize(doc);pxFill(doc,PDFX.soft);pxDraw(doc,PDFX.border);doc.roundedRect(14,y,w-28,10,3,3,'FD');pxFill(doc,color);doc.roundedRect(14,y,4,10,2,2,'F');pxText(doc,title,21,y+6.7,{size:9.5,style:'bold'});return y+14;}
-function pxKpi(doc,x,y,w,title,value,sub,color){pxFill(doc,PDFX.white);pxDraw(doc,PDFX.border);doc.roundedRect(x,y,w,24,4,4,'FD');pxFill(doc,color);doc.roundedRect(x,y,4,24,4,4,'F');pxText(doc,title,x+8,y+7,{size:6.5,style:'bold',color:PDFX.muted});pxText(doc,String(value),x+8,y+17,{size:14,style:'bold',color});pxText(doc,sub,x+w-5,y+17,{size:6.2,color:PDFX.light,align:'right'});}
-function pxPersonCard(doc,y,p){pxFill(doc,PDFX.white);pxDraw(doc,PDFX.border);doc.roundedRect(14,y,182,30,4,4,'FD');pxFill(doc,PDFX.navy);doc.roundedRect(18,y+6,18,18,3,3,'F');pxText(doc,getIni(p.nombre||p.rfc),27,y+17,{size:8.5,style:'bold',color:PDFX.white,align:'center'});pxText(doc,p.nombre||'SIN NOMBRE REGISTRADO',42,y+11,{size:11.5,style:'bold',maxWidth:145});pxText(doc,`RFC: ${p.rfc}`,42,y+18,{size:8,color:PDFX.muted});pxText(doc,'Reporte individual de licencias, LCGS y facilidades administrativas',42,y+24,{size:7,color:PDFX.light});return y+38;}
-function pxTable(doc,startY,head,body,opt={}){if(!body||!body.length)return startY;doc.autoTable({startY,head:[head],body,theme:'grid',margin:opt.margin||{left:14,right:14,bottom:18,top:36},tableWidth:opt.tableWidth||'auto',styles:{font:'helvetica',fontSize:opt.fontSize||7,cellPadding:opt.cellPadding||2.2,overflow:'linebreak',valign:'middle',textColor:PDFX.text,lineColor:PDFX.border,lineWidth:.12,minCellHeight:5},headStyles:{fillColor:opt.headColor||PDFX.navy,textColor:[255,255,255],fontStyle:'bold',halign:'center',valign:'middle'},alternateRowStyles:{fillColor:[249,251,253]},columnStyles:opt.columnStyles||{}});return doc.lastAutoTable.finalY+10;}
-function pxSafeName(v){return String(v||'REPORTE').replace(/[\\/:*?"<>|]/g,'').replace(/[^a-zA-Z0-9_\-\s]/g,'').replace(/\s+/g,'_').slice(0,80);}
-function pxChartCard(doc,x,y,w,h,title){pxFill(doc,PDFX.white);pxDraw(doc,PDFX.border);doc.roundedRect(x,y,w,h,4,4,'FD');pxText(doc,title,x+5,y+7,{size:8.5,style:'bold'});return {x:x+5,y:y+13,w:w-10,h:h-18};}
-function pxHBar(doc,{x,y,w,h,title,data,total,accent=PDFX.navy,limit=5,labelWidth=55}){const a=pxChartCard(doc,x,y,w,h,title);const items=(data||[]).slice(0,limit);if(!items.length){pxText(doc,'Sin datos',a.x,a.y+4,{size:7,color:PDFX.light});return;}const rowH=Math.min(9,(a.h-2)/items.length);const max=Math.max(...items.map(i=>i[1]),1);const barX=a.x+labelWidth;const valW=23;const barW=Math.max(10,a.w-labelWidth-valW-4);let cy=a.y;items.forEach(([name,val])=>{const pct=total?((val/total)*100):0;pxText(doc,pxTrunc(doc,name,labelWidth-3),a.x,cy+4.1,{size:6.3,color:PDFX.muted});pxFill(doc,[235,239,245]);doc.roundedRect(barX,cy+1,barW,3.6,1.8,1.8,'F');pxFill(doc,accent);doc.roundedRect(barX,cy+1,Math.max(1.5,(val/max)*barW),3.6,1.8,1.8,'F');pxText(doc,`${val} · ${pct.toFixed(0)}%`,a.x+a.w,cy+4.1,{size:6.1,color:PDFX.muted,align:'right'});cy+=rowH;});}
-function pxVBar(doc,{x,y,w,h,title,data,total,accent=PDFX.amber,limit=10}){const a=pxChartCard(doc,x,y,w,h,title);const items=(data||[]).slice(0,limit);if(!items.length){pxText(doc,'Sin datos',a.x,a.y+4,{size:7,color:PDFX.light});return;}const max=Math.max(...items.map(i=>i[1]),1);const baseY=a.y+a.h-9;const chartH=a.h-17;const gap=2;const bw=Math.max(4,(a.w-gap*(items.length-1))/items.length);items.forEach(([name,val],idx)=>{const bx=a.x+idx*(bw+gap);const bh=Math.max(2,(val/max)*chartH);pxFill(doc,accent);doc.roundedRect(bx,baseY-bh,bw,bh,1,1,'F');pxText(doc,String(val),bx+bw/2,baseY-bh-1,{size:5.5,color:PDFX.muted,align:'center'});pxText(doc,String(name).split(' ')[0].slice(0,5),bx+bw/2,baseY+5,{size:5.3,color:PDFX.light,align:'center'});});}
-function pxNoData(doc,y,text='No hay registros disponibles'){const {w}=pxSize(doc);pxFill(doc,PDFX.soft);pxDraw(doc,PDFX.border);doc.roundedRect(14,y,w-28,26,4,4,'FD');pxText(doc,text,w/2,y+12,{size:11,style:'bold',color:PDFX.muted,align:'center'});pxText(doc,'Cambia los filtros o revisa que exista información registrada.',w/2,y+20,{size:7,color:PDFX.light,align:'center'});}
-function pxNorm(k){return String(k||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim();}
-function pxValNames(row,names){const wanted=names.map(pxNorm);for(const [k,v] of Object.entries(row||{})){if(v===null||v===undefined||String(v).trim()==='')continue;if(wanted.includes(pxNorm(k)))return v;}return '';}
-function pxValContains(row,words){const wanted=words.map(pxNorm);for(const [k,v] of Object.entries(row||{})){if(v===null||v===undefined||String(v).trim()==='')continue;const nk=pxNorm(k);if(wanted.every(w=>nk.includes(w)))return v;}return '';}
-function pxFirstVal(row,options){for(const op of options){const v=Array.isArray(op)?pxValNames(row,op):pxValContains(row,[op]);if(v!==null&&v!==undefined&&String(v).trim()!=='')return v;}return '—';}
-function pxOutDate(v){if(v===null||v===undefined||String(v).trim()==='')return '—';const s=String(v).trim();return isISODate(s)?fmtDate(s):s;}
-function pxOutTime(v){if(v===null||v===undefined||String(v).trim()==='')return '—';const s=String(v).trim();return isExcelTime(s)?fmtTime(s):s;}
-function pxReal(values){return values.some(v=>{const s=String(v??'').trim();return s&&s!=='—'&&s!=='--/--/--'&&s!=='././.'&&s!=='undefined/undefined/undefined';});}
-function pxCleanFac(v){if(v===null||v===undefined)return '';let s=String(v).trim();if(!s||s==='.'||s==='}')return '';if(isISODate(s))return fmtDate(s);return s.replace(/\\/g,'/').replace(/,\s*$/,'').trim();}
-function pxExpandFac(v){v=pxCleanFac(v);if(!v)return[];if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v)){const[d,m,y]=v.split('/');return[`${pad(d)}/${pad(m)}/${y}`];}const m=v.match(/^(.+)\/(\d{1,2})\/(\d{4})$/);if(!m)return[v];const mm=pad(m[2]),yr=m[3],out=[];m[1].split('/').forEach(tok=>{tok=tok.trim();if(!tok)return;if(tok.includes('-')){const p=tok.split('-').map(x=>x.trim()).filter(Boolean);out.push(p.length===2?`${pad(p[0])}-${pad(p[1])}/${mm}/${yr}`:`${tok}/${mm}/${yr}`);}else if(tok.includes(',')){tok.split(',').map(x=>x.trim()).filter(Boolean).forEach(d=>out.push(`${pad(d)}/${mm}/${yr}`));}else out.push(`${pad(tok)}/${mm}/${yr}`);});return out.length?out:[v];}
-function pxFacDias(row){const meses=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];const dias=[];meses.forEach(mes=>{const key=Object.keys(row||{}).find(k=>{const nk=pxNorm(k);return nk.includes('FACILIDADES ADMINISTRATIVAS')&&nk.includes(mes)&&nk.includes('2026');});if(key)pxExpandFac(row[key]).forEach(d=>dias.push(`${mes}: ${d}`));});return dias;}
-
-async function genPDF(){
-  if(!cur||!DB[cur])return;
-  const p=DB[cur], {jsPDF}=window.jspdf, doc=new jsPDF('portrait','mm','a4'), generated=new Date().toLocaleString('es-MX');
-  const licencias=[],lcgs=[],facilidades=[];
-  Object.entries(p.fuentes||{}).forEach(([src,sheets])=>Object.values(sheets||{}).forEach(recs=>(recs||[]).forEach(r=>{
-    const ns=pxNorm(src);
-    if((ns.includes('CONTROL')||ns.includes('LICENCIA'))&&!ns.includes('LCGS')&&!ns.includes('GOCE')&&!ns.includes('FACILIDAD')){
-      const diagnostico=pxFirstVal(r,[['DIAGNOSTICO','DIAGNÓSTICO','DIAGNOSTICO_2','DIAGNÓSTICO_2'],'DIAGNOSTICO']);
-      const dias=pxFirstVal(r,[['# DIAS','# DÍAS','DIAS','DÍAS','NO. DIAS','NO. DÍAS','NUMERO DE DIAS','NÚMERO DE DÍAS'],'DIAS']);
-      const d=pxValNames(r,['D']),m=pxValNames(r,['M']),a=pxValNames(r,['A']);
-      const d2=pxValNames(r,['D_2']),m2=pxValNames(r,['M_2']),a2=pxValNames(r,['A_2'])||a;
-      const inicio=(d||m||a)?`${d||'--'}/${m||'--'}/${a||'--'}`:pxOutDate(pxFirstVal(r,[['FECHA'],['FECHA DE INICIO'],['INICIO']]));
-      const termino=(d2||m2||a2)?`${d2||'--'}/${m2||'--'}/${a2||'--'}`:pxOutDate(pxFirstVal(r,[['FECHA_2'],['FECHA DE INICIO_2'],['INICIO_2']]));
-      if(pxReal([diagnostico,dias])||/\d/.test(String(inicio))||/\d/.test(String(termino)))licencias.push([diagnostico,inicio,termino,dias]);
-    }else if(ns.includes('LCGS')||ns.includes('GOCE')){
-      const row=[pxFirstVal(r,[['CONSECUTIVO','NO.','NUMERO','NÚMERO']]),pxFirstVal(r,[['NO. DÍAS','NO. DIAS','DIAS','DÍAS']]),pxOutDate(pxFirstVal(r,[['FECHA DE INICIO','FECHA INICIO','INICIO']])),pxOutDate(pxFirstVal(r,[['FECHA DE TERMINO','FECHA DE TÉRMINO','FECHA TERMINO','FECHA TÉRMINO','TERMINO','TÉRMINO']])),pxFirstVal(r,[['TURNO','TURNO ','JORNADA'],'TURNO'])];
-      if(pxReal(row))lcgs.push(row);
-    }else if(ns.includes('FACILIDAD')){
-      const servicio=pxFirstVal(r,[['SERVICIO','ÁREA','AREA']]),turno=pxFirstVal(r,[['TURNO','TURNO ','JORNADA'],'TURNO']),entrada=pxOutTime(pxFirstVal(r,[['ENTRADA','HORA ENTRADA']])),salida=pxOutTime(pxFirstVal(r,[['SALIDA','HORA SALIDA']])),dias=pxFacDias(r);
-      if(dias.length)dias.forEach(dia=>facilidades.push([servicio,turno,entrada,salida,dia]));else if(pxReal([servicio,turno,entrada,salida]))facilidades.push([servicio,turno,entrada,salida,'—']);
-    }
-  })));
-  const total=licencias.length+lcgs.length+facilidades.length;
-  pxHeader(doc,'Reporte Integral de Licencias','Hospital de la Mujer · Control administrativo individual',generated);
-  let y=40;y=pxPersonCard(doc,y,p);
-  pxKpi(doc,14,y,42,'LICENCIAS',licencias.length,'Médicas',PDFX.navy);pxKpi(doc,61,y,42,'LCGS',lcgs.length,'Goce sueldo',PDFX.teal);pxKpi(doc,108,y,42,'FACILIDADES',facilidades.length,'Administrativas',PDFX.amber);pxKpi(doc,155,y,41,'TOTAL',total,'Registros',PDFX.slate);y+=34;
-  pxFill(doc,PDFX.soft);pxDraw(doc,PDFX.border);doc.roundedRect(14,y,182,16,3,3,'FD');pxText(doc,'Resumen del reporte',18,y+6,{size:8,style:'bold'});pxText(doc,'Los registros se separan por colores para identificar rápidamente cada tipo de incidencia.',18,y+12,{size:7,color:PDFX.muted});y+=26;
-  if(licencias.length){y=pxEnsure(doc,y,45,generated,'Reporte Integral de Licencias','Continuación · Licencias Médicas');y=pxSection(doc,'Licencias Médicas',y,PDFX.navy);y=pxTable(doc,y,['Diagnóstico','Inicio','Término','Días'],licencias,{fontSize:7,headColor:PDFX.navy,columnStyles:{0:{cellWidth:92},1:{cellWidth:32,halign:'center'},2:{cellWidth:32,halign:'center'},3:{cellWidth:20,halign:'center'}}});}
-  if(lcgs.length){y=pxEnsure(doc,y,45,generated,'Reporte Integral de Licencias','Continuación · LCGS');y=pxSection(doc,'Licencias con Goce de Sueldo',y,PDFX.teal);y=pxTable(doc,y,['Consecutivo','Días','Inicio','Término','Turno'],lcgs,{fontSize:7,headColor:PDFX.teal,columnStyles:{0:{cellWidth:34,halign:'center'},1:{cellWidth:20,halign:'center'},2:{cellWidth:36,halign:'center'},3:{cellWidth:36,halign:'center'},4:{cellWidth:50}}});}
-  if(facilidades.length){y=pxEnsure(doc,y,45,generated,'Reporte Integral de Licencias','Continuación · Facilidades Administrativas');y=pxSection(doc,'Facilidades Administrativas',y,PDFX.amber);y=pxTable(doc,y,['Servicio','Turno','Entrada','Salida','Día de facilidad'],facilidades,{fontSize:6.8,headColor:PDFX.amber,columnStyles:{0:{cellWidth:44},1:{cellWidth:28,halign:'center'},2:{cellWidth:22,halign:'center'},3:{cellWidth:22,halign:'center'},4:{cellWidth:62}}});}
-  if(!total)pxNoData(doc,y,'No se encontraron registros para esta persona');
-  pxFooter(doc,generated);doc.save(`REPORTE_${pxSafeName(p.nombre||p.rfc)}.pdf`);
-}
-
-async function genReporteGlobalFacMes(mesIndex=new Date().getMonth(),anio=new Date().getFullYear()){
-  if(!DB){alert('Primero espera a que cargue la base de datos.');return;}
-  const {jsPDF}=window.jspdf,doc=new jsPDF('landscape','mm','a4'),generated=new Date().toLocaleString('es-MX'),MESES=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'],mesNombre=MESES[mesIndex],anioStr=String(anio);
-  const detalle=[],porPersona=new Map(),porServicio=new Map(),porTurno=new Map();
-  Object.values(DB).forEach(persona=>Object.entries(persona.fuentes||{}).forEach(([src,sheets])=>{if(!pxNorm(src).includes('FACILIDAD'))return;Object.values(sheets||{}).forEach(recs=>(recs||[]).forEach(row=>{const campo=Object.keys(row||{}).find(k=>{const nk=pxNorm(k);return nk.includes('FACILIDADES ADMINISTRATIVAS')&&nk.includes(mesNombre)&&nk.includes(anioStr);});if(!campo)return;const dias=pxExpandFac(row[campo]);if(!dias.length)return;const servicio=String(pxValNames(row,['SERVICIO','ÁREA','AREA'])||'—').trim()||'—',turno=String(pxValNames(row,['TURNO','JORNADA'])||'—').trim()||'—',entrada=pxOutTime(pxValNames(row,['ENTRADA','HORA ENTRADA'])),salida=pxOutTime(pxValNames(row,['SALIDA','HORA SALIDA']));dias.forEach(dia=>{detalle.push([persona.rfc||'—',persona.nombre||'SIN NOMBRE',servicio,turno,entrada,salida,dia]);const pk=`${persona.rfc} — ${persona.nombre}`;porPersona.set(pk,(porPersona.get(pk)||0)+1);porServicio.set(servicio,(porServicio.get(servicio)||0)+1);porTurno.set(turno,(porTurno.get(turno)||0)+1);});}));}));
-  const total=detalle.length,personas=porPersona.size,servicios=porServicio.size,turnos=porTurno.size,arrServicio=Array.from(porServicio.entries()).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'es')),arrPersona=Array.from(porPersona.entries()).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'es')),arrTurno=Array.from(porTurno.entries()).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'es'));
-  pxHeader(doc,`Reporte global de facilidades · ${mesNombre} ${anioStr}`,'Hospital de la Mujer · Resumen mensual',generated);let y=40;pxKpi(doc,14,y,52,'FACILIDADES',total,'Eventos',PDFX.amber);pxKpi(doc,72,y,52,'PERSONAS',personas,'RFC únicos',PDFX.navy);pxKpi(doc,130,y,52,'ÁREAS',servicios,'Servicios',PDFX.teal);pxKpi(doc,188,y,52,'TURNOS',turnos,'Jornadas',PDFX.slate);pxKpi(doc,246,y,37,'PROM.',personas?(total/personas).toFixed(1):'0','Por persona',PDFX.navyDark);
-  pxHBar(doc,{x:14,y:76,w:130,h:56,title:'Top áreas / servicios',data:arrServicio,total,accent:PDFX.teal,limit:5,labelWidth:58});pxHBar(doc,{x:153,y:76,w:130,h:56,title:'Personas con más facilidades',data:arrPersona,total,accent:PDFX.navy,limit:5,labelWidth:72});pxHBar(doc,{x:14,y:138,w:130,h:42,title:'Distribución por turno',data:arrTurno,total,accent:PDFX.slate,limit:4,labelWidth:42});pxFill(doc,PDFX.soft);pxDraw(doc,PDFX.border);doc.roundedRect(153,138,130,42,4,4,'FD');pxText(doc,'Lectura rápida',158,146,{size:8.5,style:'bold'});pxWrap(doc,`Mes analizado: ${mesNombre} ${anioStr}. Total de eventos reales encontrados: ${total}. Área con mayor carga: ${arrServicio[0]?.[0]||'—'} (${arrServicio[0]?.[1]||0}).`,158,154,118,3.8,{size:7,color:PDFX.muted});
-  if(!detalle.length)pxNoData(doc,188,'No hay facilidades registradas para este mes');else{doc.addPage('landscape');pxHeader(doc,'Detalle global de facilidades','Hospital de la Mujer · Registros del mes seleccionado',generated);pxTable(doc,36,['#','RFC','Nombre','Área / servicio','Turno','Entrada','Salida','Día'],detalle.map((r,i)=>[i+1,...r]),{fontSize:6.5,headColor:PDFX.amber,columnStyles:{0:{cellWidth:10,halign:'center'},1:{cellWidth:26},2:{cellWidth:62},3:{cellWidth:58},4:{cellWidth:24,halign:'center'},5:{cellWidth:18,halign:'center'},6:{cellWidth:18,halign:'center'},7:{cellWidth:50}},margin:{left:14,right:14,bottom:18,top:36}});}
-  pxFooter(doc,generated);doc.save(`REPORTE_GLOBAL_FACILIDADES_${mesNombre}_${anioStr}.pdf`);
-}
-
-function genPDFReporteFacilidadesAvanzado(){
-  if(!DB){alert('Primero espera a que cargue la base de datos.');return;}
-  const rows=advGetFilteredRows().slice().sort((a,b)=>a.nombre.localeCompare(b.nombre,'es')||a.anio.localeCompare(b.anio)||a.mesIndex-b.mesIndex||a.dia.localeCompare(b.dia,'es')),{jsPDF}=window.jspdf,doc=new jsPDF('landscape','mm','a4'),generated=new Date().toLocaleString('es-MX');
-  const total=rows.length,personas=new Set(rows.map(r=>r.rfc)).size,servicios=new Set(rows.map(r=>r.servicio)).size,turnosCount=new Set(rows.map(r=>r.turno)).size,promedio=personas?(total/personas).toFixed(1):'0';
-  const porServicio=advCountMap(rows,r=>r.servicio),porTurno=advCountMap(rows,r=>r.turno),porMes=advCountMap(rows,r=>`${r.mes} ${r.anio}`),porPersona=advCountMap(rows,r=>`${r.rfc} — ${r.nombre}`),topServicio=porServicio[0]||['—',0],topPersona=porPersona[0]||['—',0];
-  pxHeader(doc,'Reporte Avanzado de Facilidades Administrativas','Hospital de la Mujer · Dashboard visual filtrado',generated);pxWrap(doc,`Filtros aplicados: ${advFilterText()}`,14,36,268,3.5,{size:7,color:PDFX.muted});
-  pxKpi(doc,14,48,50,'FACILIDADES',String(total),'Eventos reales',PDFX.amber);pxKpi(doc,68,48,50,'PERSONAS',String(personas),'RFC únicos',PDFX.navy);pxKpi(doc,122,48,50,'ÁREAS',String(servicios),'Servicios',PDFX.teal);pxKpi(doc,176,48,50,'TURNOS',String(turnosCount),'Jornadas',PDFX.slate);pxKpi(doc,230,48,52,'PROMEDIO',String(promedio),'Fac./persona',PDFX.navyDark);
-  pxSection(doc,'Resumen visual · Áreas verde · Personas azul · Turnos gris · Mes ámbar',80,PDFX.navy);pxHBar(doc,{x:14,y:94,w:130,h:58,title:'Top áreas / servicios',data:porServicio,total,accent:PDFX.teal,limit:5,labelWidth:58});pxHBar(doc,{x:153,y:94,w:130,h:58,title:'Top personas con más facilidades',data:porPersona,total,accent:PDFX.navy,limit:5,labelWidth:74});pxHBar(doc,{x:14,y:160,w:130,h:40,title:'Distribución por turno',data:porTurno,total,accent:PDFX.slate,limit:4,labelWidth:44});pxVBar(doc,{x:153,y:160,w:130,h:40,title:'Comportamiento por mes',data:porMes,total,accent:PDFX.amber,limit:10});
-  doc.addPage('landscape');pxHeader(doc,'Resumen tabular de facilidades',`Filtros: ${advFilterText()}`,generated);
-  if(!rows.length)pxNoData(doc,45,'No hay resultados con los filtros seleccionados');else{pxTable(doc,40,['Área / servicio','Total','%'],porServicio.map(([k,v])=>[k,v,`${advPct(v,total).toFixed(1)}%`]),{tableWidth:126,margin:{left:14,right:157,bottom:18,top:36},fontSize:6.8,headColor:PDFX.teal,columnStyles:{0:{cellWidth:84},1:{cellWidth:18,halign:'center'},2:{cellWidth:24,halign:'center'}}});pxTable(doc,40,['Turno','Total','%'],porTurno.map(([k,v])=>[k,v,`${advPct(v,total).toFixed(1)}%`]),{tableWidth:58,margin:{left:153,right:86,bottom:18,top:36},fontSize:6.8,headColor:PDFX.slate,columnStyles:{0:{cellWidth:30},1:{cellWidth:12,halign:'center'},2:{cellWidth:16,halign:'center'}}});pxTable(doc,40,['Mes','Total','%'],porMes.slice(0,12).map(([k,v])=>[k,v,`${advPct(v,total).toFixed(1)}%`]),{tableWidth:58,margin:{left:225,right:14,bottom:18,top:36},fontSize:6.8,headColor:PDFX.amber,columnStyles:{0:{cellWidth:30},1:{cellWidth:12,halign:'center'},2:{cellWidth:16,halign:'center'}}});let yTop=Math.max(98,doc.lastAutoTable?doc.lastAutoTable.finalY+10:98);pxSection(doc,'Top personas con más facilidades',yTop,PDFX.navy);pxTable(doc,yTop+14,['#','RFC','Nombre','Total','%'],porPersona.slice(0,15).map(([k,v],i)=>{const parts=String(k).split(' — ');return[i+1,parts[0]||'—',parts.slice(1).join(' — ')||'—',v,`${advPct(v,total).toFixed(1)}%`];}),{tableWidth:268,margin:{left:14,right:14,bottom:18,top:36},fontSize:6.7,headColor:PDFX.navy,columnStyles:{0:{cellWidth:10,halign:'center'},1:{cellWidth:34},2:{cellWidth:174},3:{cellWidth:20,halign:'center'},4:{cellWidth:24,halign:'center'}}});}
-  if(rows.length){doc.addPage('landscape');pxHeader(doc,'Detalle de eventos filtrados',`Total de filas: ${rows.length}`,generated);pxTable(doc,38,['#','RFC','Nombre','Área','Turno','Entrada','Salida','Día','Mes','Año'],rows.map((r,i)=>[i+1,r.rfc,r.nombre,r.servicio,r.turno,r.entrada,r.salida,r.dia,r.mes,r.anio]),{fontSize:5.8,cellPadding:1.5,headColor:PDFX.navy,columnStyles:{0:{cellWidth:9,halign:'center'},1:{cellWidth:24},2:{cellWidth:50},3:{cellWidth:48},4:{cellWidth:20,halign:'center'},5:{cellWidth:17,halign:'center'},6:{cellWidth:17,halign:'center'},7:{cellWidth:28},8:{cellWidth:24},9:{cellWidth:14,halign:'center'}},margin:{left:14,right:14,bottom:18,top:36}});doc.addPage('landscape');pxHeader(doc,'Lectura rápida','Hospital de la Mujer · Interpretación del periodo filtrado',generated);let y=45;pxFill(doc,PDFX.soft);pxDraw(doc,PDFX.border);doc.roundedRect(14,y,268,46,4,4,'FD');pxText(doc,'Hallazgos principales',20,y+10,{size:11,style:'bold'});pxWrap(doc,`Área con mayor carga: ${topServicio[0]} con ${topServicio[1]} eventos, equivalente al ${advPct(topServicio[1],total).toFixed(1)}% del total filtrado.`,20,y+20,252,4,{size:8,color:PDFX.muted});pxWrap(doc,`Persona con más eventos: ${topPersona[0]} con ${topPersona[1]} facilidades registradas.`,20,y+31,252,4,{size:8,color:PDFX.muted});}
-  pxFooter(doc,generated);doc.save(`REPORTE_VISUAL_FACILIDADES_${new Date().toISOString().slice(0,10)}.pdf`);
-}
-
-
-
-// =====================================================
-// OVERRIDES V2 - REPORTE DE PERSONA SIN SOBREPOSICIONES
-// - Tarjeta visible en ficha y detalle de facilidades
-// - Días corregidos en Licencias Médicas y LCGS
-// - Encabezado en páginas continuadas de tablas largas
-// - Anchos y fuentes ajustados para evitar cortes
-// =====================================================
-function pxFieldAny(row, exactNames=[], containsWords=[]){
-  const exact=(exactNames||[]).map(pxNorm);
-  for(const [k,v] of Object.entries(row||{})){
-    if(v===null||v===undefined||String(v).trim()==='') continue;
-    if(exact.includes(pxNorm(k))) return String(v).trim();
-  }
-  const words=(containsWords||[]).map(pxNorm);
-  if(words.length){
-    for(const [k,v] of Object.entries(row||{})){
-      if(v===null||v===undefined||String(v).trim()==='') continue;
-      const nk=pxNorm(k);
-      if(words.every(w=>nk.includes(w))) return String(v).trim();
-    }
-  }
-  return '';
-}
-function pxGuessTarjeta(row){
-  return pxFieldAny(row,[
-    'TARJETA','NO TARJETA','NO. TARJETA','N° TARJETA','NUMERO DE TARJETA','NÚMERO DE TARJETA',
-    'TARJETA DE ASISTENCIA','NUM TARJETA','NOMINA','NÓMINA','NO NOMINA','NO. NOMINA'
-  ],['TARJETA']) || '—';
-}
-function pxGuessDias(row){
-  const exact=pxFieldAny(row,[
-    '# DIAS','# DÍAS','NO DIAS','NO DÍAS','NO. DIAS','NO. DÍAS','N° DIAS','N° DÍAS',
-    'NUMERO DE DIAS','NÚMERO DE DÍAS','DIAS','DÍAS','TOTAL DIAS','TOTAL DÍAS','DURACION','DURACIÓN'
-  ]);
-  if(exact) return exact;
-  for(const [k,v] of Object.entries(row||{})){
-    if(v===null||v===undefined||String(v).trim()==='') continue;
-    const nk=pxNorm(k);
-    if(nk.includes('DIAGNOST')) continue;
-    if(nk.includes('FECHA')) continue;
-    if(nk==='D' || nk==='D_2') continue;
-    if(nk.includes('DIA') || nk.includes('DIAS') || nk.includes('DURACION')){
-      const s=String(v).trim();
-      if(s) return s;
-    }
-  }
-  return '—';
-}
-function pxFindPersonTarjeta(persona){
-  for(const sheets of Object.values(persona.fuentes||{})){
-    for(const recs of Object.values(sheets||{})){
-      for(const row of (recs||[])){
-        const t=pxGuessTarjeta(row);
-        if(t && t!=='—') return t;
-      }
-    }
-  }
-  return '—';
-}
-function pxPersonCardV2(doc,y,p,tarjeta){
-  pxFill(doc,PDFX.white);pxDraw(doc,PDFX.border);doc.roundedRect(14,y,182,36,4,4,'FD');
-  pxFill(doc,PDFX.navy);doc.roundedRect(18,y+8,18,18,3,3,'F');
-  pxText(doc,getIni(p.nombre||p.rfc),27,y+19,{size:8.5,style:'bold',color:PDFX.white,align:'center'});
-  pxText(doc,pxTrunc(doc,p.nombre||'SIN NOMBRE REGISTRADO',132),42,y+10,{size:11.2,style:'bold'});
-  pxText(doc,`RFC: ${p.rfc}`,42,y+17,{size:7.8,color:PDFX.muted});
-  pxText(doc,`Tarjeta: ${tarjeta || '—'}`,42,y+24,{size:7.8,style:'bold',color:PDFX.navy});
-  pxText(doc,'Reporte individual de licencias, LCGS y facilidades administrativas',42,y+31,{size:6.8,color:PDFX.light});
-  return y+44;
-}
-function pxTableSafe(doc,startY,head,body,opt={}){
-  if(!body||!body.length)return startY;
-  const firstPage=doc.internal.getCurrentPageInfo().pageNumber;
-  const pageTitle=opt.pageTitle||'Reporte Integral de Licencias';
-  const pageSubtitle=opt.pageSubtitle||'Continuación';
-  const generated=opt.generated||'';
-  const margin=Object.assign({left:14,right:14,bottom:18,top:38},opt.margin||{});
-  doc.autoTable({
-    startY,head:[head],body,theme:'grid',margin,tableWidth:opt.tableWidth||'auto',
-    styles:{font:'helvetica',fontSize:opt.fontSize||6.7,cellPadding:opt.cellPadding||2,overflow:'linebreak',valign:'middle',textColor:PDFX.text,lineColor:PDFX.border,lineWidth:.12,minCellHeight:5},
-    headStyles:{fillColor:opt.headColor||PDFX.navy,textColor:[255,255,255],fontStyle:'bold',halign:'center',valign:'middle'},
-    alternateRowStyles:{fillColor:[249,251,253]},
-    columnStyles:opt.columnStyles||{},
-    didDrawPage:function(){
-      const current=doc.internal.getCurrentPageInfo().pageNumber;
-      if(current!==firstPage){pxHeader(doc,pageTitle,pageSubtitle,generated);}
-    }
-  });
-  return doc.lastAutoTable.finalY+10;
-}
-
-async function genPDF(){
-  if(!cur||!DB[cur])return;
-  const p=DB[cur], {jsPDF}=window.jspdf, doc=new jsPDF('portrait','mm','a4'), generated=new Date().toLocaleString('es-MX');
-  const licencias=[],lcgs=[],facilidades=[];
-  const tarjetaPersona=pxFindPersonTarjeta(p);
-
-  Object.entries(p.fuentes||{}).forEach(([src,sheets])=>Object.values(sheets||{}).forEach(recs=>(recs||[]).forEach(r=>{
-    const ns=pxNorm(src);
-    if((ns.includes('CONTROL')||ns.includes('LICENCIA'))&&!ns.includes('LCGS')&&!ns.includes('GOCE')&&!ns.includes('FACILIDAD')){
-      const diagnostico=pxFirstVal(r,[['DIAGNOSTICO','DIAGNÓSTICO','DIAGNOSTICO_2','DIAGNÓSTICO_2'],'DIAGNOSTICO']);
-      const dias=pxGuessDias(r);
-      const d=pxValNames(r,['D']),m=pxValNames(r,['M']),a=pxValNames(r,['A']);
-      const d2=pxValNames(r,['D_2']),m2=pxValNames(r,['M_2']),a2=pxValNames(r,['A_2'])||a;
-      const inicio=(d||m||a)?`${d||'--'}/${m||'--'}/${a||'--'}`:pxOutDate(pxFirstVal(r,[['FECHA'],['FECHA DE INICIO'],['INICIO']]));
-      const termino=(d2||m2||a2)?`${d2||'--'}/${m2||'--'}/${a2||'--'}`:pxOutDate(pxFirstVal(r,[['FECHA_2'],['FECHA DE TERMINO'],['FECHA TERMINO'],['TERMINO'],['TÉRMINO']]));
-      if(pxReal([diagnostico,dias])||/\d/.test(String(inicio))||/\d/.test(String(termino)))licencias.push([diagnostico,inicio,termino,dias]);
-    }else if(ns.includes('LCGS')||ns.includes('GOCE')){
-      const row=[
-        pxFirstVal(r,[['CONSECUTIVO','NO.','NUMERO','NÚMERO','FOLIO']]),
-        pxGuessDias(r),
-        pxOutDate(pxFirstVal(r,[['FECHA DE INICIO','FECHA INICIO','INICIO']])),
-        pxOutDate(pxFirstVal(r,[['FECHA DE TERMINO','FECHA DE TÉRMINO','FECHA TERMINO','FECHA TÉRMINO','TERMINO','TÉRMINO']])),
-        pxFirstVal(r,[['TURNO','TURNO ','JORNADA'],'TURNO'])
-      ];
-      if(pxReal(row))lcgs.push(row);
-    }else if(ns.includes('FACILIDAD')){
-      const tarjeta=pxGuessTarjeta(r), servicio=pxFirstVal(r,[['SERVICIO','ÁREA','AREA']]),turno=pxFirstVal(r,[['TURNO','TURNO ','JORNADA'],'TURNO']),entrada=pxOutTime(pxFirstVal(r,[['ENTRADA','HORA ENTRADA']])),salida=pxOutTime(pxFirstVal(r,[['SALIDA','HORA SALIDA']])),dias=pxFacDias(r);
-      if(dias.length)dias.forEach(dia=>facilidades.push([tarjeta,servicio,turno,entrada,salida,dia]));else if(pxReal([servicio,turno,entrada,salida]))facilidades.push([tarjeta,servicio,turno,entrada,salida,'—']);
-    }
-  })));
-
-  const total=licencias.length+lcgs.length+facilidades.length;
-  pxHeader(doc,'Reporte Integral de Licencias','Hospital de la Mujer · Control administrativo individual',generated);
-  let y=40;y=pxPersonCardV2(doc,y,p,tarjetaPersona);
-  pxKpi(doc,14,y,42,'LICENCIAS',licencias.length,'Médicas',PDFX.navy);pxKpi(doc,61,y,42,'LCGS',lcgs.length,'Goce sueldo',PDFX.teal);pxKpi(doc,108,y,42,'FACILIDADES',facilidades.length,'Administrativas',PDFX.amber);pxKpi(doc,155,y,41,'TOTAL',total,'Registros',PDFX.slate);y+=34;
-  pxFill(doc,PDFX.soft);pxDraw(doc,PDFX.border);doc.roundedRect(14,y,182,18,3,3,'FD');pxText(doc,'Resumen del reporte',18,y+6,{size:8,style:'bold'});pxText(doc,'Los registros se separan por color. Las tablas largas continúan con encabezado para evitar sobreposición.',18,y+12,{size:6.8,color:PDFX.muted});y+=28;
-
-  if(licencias.length){y=pxEnsure(doc,y,48,generated,'Reporte Integral de Licencias','Continuación · Licencias Médicas');y=pxSection(doc,'Licencias Médicas',y,PDFX.navy);y=pxTableSafe(doc,y,['Diagnóstico','Inicio','Término','# días'],licencias,{generated,pageSubtitle:'Continuación · Licencias Médicas',fontSize:6.8,headColor:PDFX.navy,columnStyles:{0:{cellWidth:90},1:{cellWidth:32,halign:'center'},2:{cellWidth:32,halign:'center'},3:{cellWidth:22,halign:'center'}}});}
-  if(lcgs.length){y=pxEnsure(doc,y,48,generated,'Reporte Integral de Licencias','Continuación · LCGS');y=pxSection(doc,'Licencias con Goce de Sueldo',y,PDFX.teal);y=pxTableSafe(doc,y,['Consecutivo','# días','Inicio','Término','Turno'],lcgs,{generated,pageSubtitle:'Continuación · LCGS',fontSize:6.8,headColor:PDFX.teal,columnStyles:{0:{cellWidth:34,halign:'center'},1:{cellWidth:22,halign:'center'},2:{cellWidth:36,halign:'center'},3:{cellWidth:36,halign:'center'},4:{cellWidth:48}}});}
-  if(facilidades.length){y=pxEnsure(doc,y,48,generated,'Reporte Integral de Licencias','Continuación · Facilidades Administrativas');y=pxSection(doc,'Facilidades Administrativas',y,PDFX.amber);y=pxTableSafe(doc,y,['Tarjeta','Servicio','Turno','Entrada','Salida','Día de facilidad'],facilidades,{generated,pageSubtitle:'Continuación · Facilidades Administrativas',fontSize:6.4,headColor:PDFX.amber,columnStyles:{0:{cellWidth:20,halign:'center'},1:{cellWidth:36},2:{cellWidth:24,halign:'center'},3:{cellWidth:18,halign:'center'},4:{cellWidth:18,halign:'center'},5:{cellWidth:62}}});}
-  if(!total)pxNoData(doc,y,'No se encontraron registros para esta persona');
-  pxFooter(doc,generated);doc.save(`REPORTE_${pxSafeName(p.nombre||p.rfc)}.pdf`);
-}
-
+/* ── INICIO ── */
+loadData();
 </script>
 </body>
 </html>
