@@ -391,6 +391,28 @@ tbody tr:hover td { background: var(--soft); }
 .adv-title p  { font-size: 12px; color: var(--tx2); line-height: 1.5; }
 .adv-actions  { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; align-items: flex-start; }
 
+/* TABS */
+.adv-tabs {
+  display: flex; gap: 4px;
+  background: var(--sur); border: 1px solid var(--brd);
+  border-radius: 12px; padding: 6px;
+  box-shadow: var(--shadow);
+}
+.adv-tab {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 9px 14px; border-radius: 8px;
+  background: transparent; border: none;
+  font-size: 12px; font-weight: 500; color: var(--tx2);
+  cursor: pointer; transition: background .15s, color .15s;
+}
+.adv-tab:hover  { background: var(--sur2); color: var(--tx); }
+.adv-tab.act    { background: var(--acc); color: #fff; }
+.adv-tab.act .adv-tab-dot { opacity: 0; }
+.adv-tab-dot    { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+.adv-tab-pane { display: flex; flex-direction: column; gap: 14px; }
+.adv-tab-pane.hidden { display: none; }
+
 .adv-filters {
   background: var(--sur); border: 1px solid var(--brd);
   border-radius: 14px; padding: 16px;
@@ -400,6 +422,7 @@ tbody tr:hover td { background: var(--soft); }
   gap: 12px;
 }
 .adv-field { display: flex; flex-direction: column; gap: 5px; }
+.adv-field-wide { grid-column: span 2; }
 .adv-field label {
   font-size: 9px; color: var(--tx2);
   font-family: 'IBM Plex Mono', monospace;
@@ -420,24 +443,36 @@ tbody tr:hover td { background: var(--soft); }
 }
 
 /* KPIs */
-.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 12px; }
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
 .kpi {
   background: var(--sur); border: 1px solid var(--brd);
-  border-radius: 14px; padding: 16px;
+  border-radius: 14px; padding: 16px 16px 14px;
   position: relative; overflow: hidden;
   box-shadow: var(--shadow);
 }
 .kpi::before {
   content: ''; position: absolute; left: 0; top: 0; bottom: 0;
-  width: 4px; background: var(--acc);
+  width: 4px;
 }
-.kpi-num { font-family: 'IBM Plex Mono', monospace; font-size: 28px; font-weight: 600; color: var(--acc); line-height: 1; }
+.kpi-navy::before  { background: var(--acc); }
+.kpi-teal::before  { background: var(--acc2); }
+.kpi-amber::before { background: var(--amber); }
+.kpi-slate::before { background: var(--acc3); }
+
+.kpi-num { font-family: 'IBM Plex Mono', monospace; font-size: 26px; font-weight: 600; line-height: 1; }
+.kpi-navy  .kpi-num  { color: var(--acc); }
+.kpi-teal  .kpi-num  { color: var(--acc2); }
+.kpi-amber .kpi-num  { color: var(--amber); }
+.kpi-slate .kpi-num  { color: var(--acc3); }
 .kpi-lbl { font-size: 10px; color: var(--tx2); margin-top: 5px; text-transform: uppercase; letter-spacing: .04em; }
 .kpi-sub { font-size: 10px; color: var(--tx3); margin-top: 3px; }
 
-/* GRID DOS COLS */
-.adv-grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 14px; }
-@media (max-width: 1060px) { .adv-grid { grid-template-columns: 1fr; } .adv-head { flex-direction: column; } .adv-actions { justify-content: flex-start; } }
+/* CHART GRIDS */
+.chart-grid-4 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.chart-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+.chart-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 1200px) { .chart-grid-4 { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 900px)  { .chart-grid-4,.chart-grid-3,.chart-grid-2 { grid-template-columns: 1fr; } }
 
 /* CARD GRÁFICA */
 .adv-card {
@@ -452,16 +487,160 @@ tbody tr:hover td { background: var(--soft); }
 }
 .adv-card-h h3 { font-size: 12px; font-weight: 600; color: var(--tx); }
 .adv-card-h span { font-size: 10px; color: var(--tx2); font-family: 'IBM Plex Mono', monospace; }
+.adv-card-body { padding: 14px; }
 
-/* BAR LIST */
-.bar-list { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
-.bar-row  { display: grid; grid-template-columns: minmax(140px, 1fr) 1.8fr 64px; gap: 8px; align-items: center; }
-.bar-name { font-size: 11px; color: var(--tx); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bar-track { height: 8px; background: var(--sur2); border: 1px solid var(--brd); border-radius: 20px; overflow: hidden; }
-.bar-fill  { height: 100%; background: var(--acc); border-radius: 20px; }
-.bar-val   { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--tx2); text-align: right; }
+/* H-BARS NUEVAS */
+.hbar-list  { display: flex; flex-direction: column; gap: 9px; }
+.hbar-row   { display: grid; grid-template-columns: minmax(110px,1fr) 2fr 80px; gap: 8px; align-items: center; }
+.hbar-name  { font-size: 11px; color: var(--tx); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hbar-track { height: 9px; background: var(--sur2); border-radius: 20px; overflow: hidden; }
+.hbar-fill  { height: 100%; border-radius: 20px; transition: width .35s ease; }
+.hbar-val   { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--tx2); text-align: right; font-weight: 600; }
+.hbar-pct   { font-weight: 400; color: var(--tx3); margin-left: 4px; }
+
+/* DONUT SVG */
+.donut-wrap   { display: flex; align-items: center; gap: 16px; }
+.donut-legend { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+.donut-leg    { display: flex; align-items: center; gap: 6px; }
+.donut-dot    { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.donut-lname  { font-size: 10px; color: var(--tx2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+.donut-lval   { font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; color: var(--tx); flex-shrink: 0; }
 
 /* TABLA AVANZADA */
-.adv-table-wrap { max-height: 460px; overflow: auto; }
+.adv-table-wrap { max-height: 480px; overflow: auto; }
+.mono { font-family: 'IBM Plex Mono', monospace; font-size: 10px; }
+.acc  { color: var(--acc); }
 .adv-note { font-size: 10px; color: var(--tx2); padding: 10px 14px; line-height: 1.5; border-top: 1px solid var(--brd); background: var(--soft); }
 .empty-adv { padding: 32px; text-align: center; color: var(--tx3); font-size: 12px; }
+
+@media (max-width: 860px) {
+  .adv-head { flex-direction: column; }
+  .adv-actions { justify-content: flex-start; }
+  .adv-tabs { flex-direction: column; }
+  .adv-field-wide { grid-column: span 1; }
+}
+
+/* ── ANÁLISIS DE FALTAS ─────────────────────────────── */
+.faltas-wrap { display: flex; flex-direction: column; gap: 16px; }
+
+.faltas-drop {
+  border: 2px dashed var(--brd2);
+  border-radius: 14px;
+  background: var(--soft);
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+}
+.faltas-drop:hover, .faltas-drop.drag-over {
+  border-color: var(--acc);
+  background: rgba(31,95,139,.04);
+}
+.faltas-drop-ico  { font-size: 36px; margin-bottom: 10px; }
+.faltas-drop-txt  { font-size: 14px; font-weight: 600; color: var(--tx); margin-bottom: 4px; }
+.faltas-drop-sub  { font-size: 11px; color: var(--tx3); }
+
+/* Badge tipo cobertura */
+.tipo-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 99px;
+  font-size: 9px; font-weight: 700; font-family: 'IBM Plex Mono', monospace;
+  text-transform: uppercase; letter-spacing: .05em;
+}
+.tipo-facilidad { background: rgba(160,111,32,.12); color: var(--amber); border: 1px solid rgba(160,111,32,.3); }
+.tipo-lcgs      { background: rgba(47,111,99,.12);  color: var(--acc2);  border: 1px solid rgba(47,111,99,.3); }
+.tipo-licmed    { background: rgba(31,95,139,.1);   color: var(--acc);   border: 1px solid rgba(31,95,139,.25); }
+
+/* ── TOAST ──────────────────────────────────────────── */
+.toast {
+  position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+  background: var(--ink); color: #fff;
+  padding: 10px 18px; border-radius: 10px;
+  font-size: 12px; font-family: 'IBM Plex Sans', sans-serif;
+  box-shadow: 0 4px 20px rgba(0,0,0,.18);
+  opacity: 0; transform: translateY(8px);
+  transition: opacity .25s, transform .25s;
+  pointer-events: none; max-width: 340px;
+}
+.toast.visible { opacity: 1; transform: translateY(0); }
+.toast.toast-err { background: #c0392b; }
+.toast.toast-warn { background: var(--amber); }
+
+/* ── STATS BAR PERSONA ──────────────────────────────── */
+.stats-bar {
+  display: flex; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.stat-pill {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--sur); border: 1px solid var(--brd);
+  border-radius: 10px; padding: 9px 14px;
+  box-shadow: var(--shadow); position: relative; overflow: hidden;
+}
+.stat-pill::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+}
+.stat-navy::before  { background: var(--acc); }
+.stat-teal::before  { background: var(--acc2); }
+.stat-amber::before { background: var(--amber); }
+.stat-num { font-family: 'IBM Plex Mono', monospace; font-size: 20px; font-weight: 700; line-height: 1; }
+.stat-navy  .stat-num  { color: var(--acc); }
+.stat-teal  .stat-num  { color: var(--acc2); }
+.stat-amber .stat-num  { color: var(--amber); }
+.stat-lbl { font-size: 10px; color: var(--tx2); text-transform: uppercase; letter-spacing: .04em; }
+.stat-sub { font-size: 9px; color: var(--tx3); margin-top: 1px; }
+
+/* ── MINI CALENDARIO FACILIDADES ────────────────────── */
+.mini-cal { display: flex; flex-direction: column; gap: 1px; margin-top: 4px; }
+.mini-cal-row {
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px;
+}
+.mcr-head > div {
+  font-size: 8px; color: var(--tx3);
+  font-family: 'IBM Plex Mono', monospace;
+  text-align: center; padding: 1px 0;
+  font-weight: 600;
+}
+.mc-empty { height: 18px; }
+.mc-day {
+  height: 18px; border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-family: 'IBM Plex Mono', monospace;
+  color: var(--tx3); background: var(--soft);
+  border: 1px solid var(--brd);
+}
+.mc-day.mc-hi {
+  background: rgba(31,95,139,.12);
+  border-color: rgba(31,95,139,.3);
+  color: var(--acc); font-weight: 700;
+}
+.mc-day.mc-range {
+  background: rgba(31,95,139,.08);
+  border-color: rgba(31,95,139,.2);
+  color: var(--acc);
+}
+/* Hacemos las cards de meses un poco más anchas para que quepa el cal */
+.mes-card { min-width: 130px; }
+
+/* ── TABLAS CON ENCABEZADO STICKY ───────────────────── */
+.adv-table-wrap thead th {
+  position: sticky; top: 0; z-index: 2;
+  background: var(--navy, #1f5f8b); color: #fff;
+}
+.tw thead th {
+  position: sticky; top: 0; z-index: 2;
+  background: var(--sur2);
+}
+
+/* ── SCROLL HINT EN TABLAS ANCHAS ───────────────────── */
+/* indicador sutil de scroll lateral en tablas */
+.adv-table-wrap { position: relative; scroll-behavior: smooth; }
+.tw { position: relative; }
+
+/* ── PILLS HEADER RESPONSIVE ────────────────────────── */
+@media (max-width: 720px) {
+  header { flex-wrap: wrap; }
+  .pills { width: 100%; justify-content: flex-start; }
+  .layout { grid-template-columns: 1fr; height: auto; }
+  .left  { height: 240px; border-right: none; border-bottom: 1px solid var(--brd); }
+  .right { height: calc(100vh - 310px); }
+}

@@ -20,7 +20,8 @@
     <div class="pill">Personas: <b id="sp">—</b></div>
     <div class="pill">Registros: <b id="sr">—</b></div>
     <div class="pill">Archivos: <b>4</b></div>
-    <button class="btn" onclick="openReporteFacilidadesAvanzado()">📊 Reportes avanzados</button>
+    <button class="btn" onclick="openReporteFacilidadesAvanzado('facilidades')">📊 Reportes avanzados</button>
+    <button class="btn sec" onclick="openFaltasPanel()">📋 Analizar Faltas</button>
   </div>
 </header>
 
@@ -33,7 +34,7 @@
       <div class="slbl">Buscar por RFC o nombre</div>
       <div class="sw" id="sw">
         <span class="s-ico">⌕</span>
-        <input type="text" class="si" id="si" placeholder="RFC completo o parte del nombre" autocomplete="off" spellcheck="false">
+        <input type="text" class="si" id="si" placeholder="RFC o nombre  (Ctrl+K)" autocomplete="off" spellcheck="false">
         <button class="s-clr" id="sc">✕</button>
         <div class="ac" id="ac"></div>
       </div>
@@ -59,9 +60,10 @@
   </div>
 </div>
 
-<!-- ── LIBRERÍAS PDF ───────────────────────────────── -->
+<!-- ── LIBRERÍAS ───────────────────────────────────── -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 
 <script src="app.js"></script>
 </body>
