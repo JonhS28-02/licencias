@@ -1578,7 +1578,33 @@ function buildTarjetaMap() {
 function parseFaltasDias(raw) {
   const s = String(raw ?? '').trim();
   if (!s) return [];
-  return [...new Set(s.split(/[,\s]+/).map(x => parseInt(x.trim(), 10)).filter(n => !isNaN(n) && n >= 1 && n <= 31))].sort((a, b) => a - b);
+  const days = new Set();
+
+  // Dividir por comas primero
+  for (const token of s.split(/\s*,\s*/)) {
+    const t = token.trim();
+    if (!t) continue;
+
+    if (t.includes('/')) {
+      // Notación de rango con diagonal: "10/11" = días 10 y 11 (rango inclusivo)
+      // Puede venir como "10/11" (2 días) o incluso "10/11/12" (3 días)
+      const parts = t.split('/').map(p => parseInt(p.trim(), 10)).filter(n => !isNaN(n) && n >= 1 && n <= 31);
+      if (parts.length >= 2) {
+        const min = Math.min(...parts), max = Math.max(...parts);
+        for (let d = min; d <= max; d++) days.add(d);
+      } else if (parts.length === 1) {
+        days.add(parts[0]);
+      }
+    } else {
+      // Número simple o separado por espacios: "5" o "1 2"
+      for (const piece of t.split(/\s+/)) {
+        const n = parseInt(piece, 10);
+        if (!isNaN(n) && n >= 1 && n <= 31) days.add(n);
+      }
+    }
+  }
+
+  return [...days].sort((a, b) => a - b);
 }
 
 function checkCoberturaFalta(persona, diaNum) {
@@ -1666,7 +1692,10 @@ function analyzeFaltas(rows) {
     }
 
     results.push({
-      tarjeta: tarjetaKey, tarjetaRaw, nombre: nombreRaw, nombreDB: persona.nombre || '—',
+      tarjeta: tarjetaKey, tarjetaRaw,
+      nombre: nombreRaw,          // nombre tal como viene en el Excel de faltas
+      nombreExcel: nombreRaw,     // alias explícito
+      nombreDB: persona.nombre || '—',  // nombre normalizado de la BD
       rfc, servicio, turno, nameMatch: nameOk,
       diasOriginales: diasOrig, justificaciones,
       diasJustificados: justificaciones.map(j => j.dia),
@@ -1793,10 +1822,11 @@ function renderFaltasResultado(analysis) {
   const totalJust     = results.reduce((a, r) => a + r.diasJustificados.length, 0);
   const totalNoJust   = results.reduce((a, r) => a + r.diasNoJustificados.length, 0);
   const pctJust       = totalFaltas ? (totalJust/totalFaltas*100).toFixed(0) : 0;
-  const servicios     = [...new Set(results.map(r => r.servicio))].filter(s => s && s !== '—').sort();
   const sinNada       = buildPersonasSinNada(results);
 
-  // Distribución por servicio
+  // Opciones para filtros
+  const servicios = [...new Set(results.map(r => r.servicio))].filter(s => s && s !== '—').sort();
+  const turnos    = [...new Set(results.map(r => r.turno))].filter(t => t && t !== '—').sort();
   const porServFaltas = countMap(results, r => r.servicio);
 
   res.innerHTML = `
@@ -1833,32 +1863,78 @@ function renderFaltasResultado(analysis) {
       </div>
     </div>
 
+    <!-- Filtros + descargas -->
     <div class="adv-card">
       <div class="adv-card-h">
-        <h3>Filtrar y exportar</h3>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <select id="fServicio" style="font-size:11px;padding:6px 10px;border:1px solid var(--brd);border-radius:7px;background:var(--soft);color:var(--tx)">
-            <option value="">Todos los servicios</option>
-            ${servicios.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('')}
-          </select>
+        <h3>Filtros</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn" onclick="downloadCorregidas()">⬇ Faltas corregidas</button>
           <button class="btn sec" onclick="downloadReporteJustificaciones()">📄 Justificaciones</button>
           <button class="btn sec" onclick="downloadReporteSinNada()">📄 Sin cobertura</button>
-          <button class="btn sec" onclick="genPDFFaltas()">🖨 PDF reporte</button>
+          <button class="btn sec" onclick="genPDFFaltas()">🖨 PDF</button>
+        </div>
+      </div>
+      <div class="faltas-filters">
+        <div class="adv-field">
+          <label>Buscar persona</label>
+          <input id="fPersonaQ" placeholder="Nombre, RFC o tarjeta…">
+        </div>
+        <div class="adv-field">
+          <label>Área / servicio</label>
+          <select id="fServicio">
+            <option value="">Todos los servicios</option>
+            ${servicios.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="adv-field">
+          <label>Turno</label>
+          <select id="fTurno">
+            <option value="">Todos los turnos</option>
+            ${turnos.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="adv-field">
+          <label>Estado de faltas</label>
+          <select id="fTipo">
+            <option value="">Todos</option>
+            <option value="con-justificacion">Con alguna justificada</option>
+            <option value="sin-justificar">Todas sin justificar</option>
+            <option value="total-justificadas">Totalmente justificadas</option>
+          </select>
         </div>
       </div>
     </div>
 
     <div id="faltasTablas"></div>`;
 
-  document.getElementById('fServicio').addEventListener('change', () => renderFaltasTablas(analysis, sinNada));
-  renderFaltasTablas(analysis, sinNada);
+  const refresh = () => renderFaltasTablas(analysis, sinNada);
+  ['fServicio','fTurno','fTipo'].forEach(id => document.getElementById(id)?.addEventListener('change', refresh));
+  document.getElementById('fPersonaQ')?.addEventListener('input', refresh);
+  refresh();
+}
+
+function applyFiltrosFaltas(results) {
+  const serv   = document.getElementById('fServicio')?.value  || '';
+  const turno  = document.getElementById('fTurno')?.value     || '';
+  const tipo   = document.getElementById('fTipo')?.value      || '';
+  const q      = (document.getElementById('fPersonaQ')?.value || '').trim().toUpperCase();
+  return results.filter(r => {
+    if (serv  && r.servicio !== serv)  return false;
+    if (turno && r.turno   !== turno)  return false;
+    if (q && !( r.tarjeta.toUpperCase().includes(q) ||
+                r.nombreDB.toUpperCase().includes(q) ||
+                r.rfc.toUpperCase().includes(q)))    return false;
+    if (tipo === 'con-justificacion'   && !r.diasJustificados.length)    return false;
+    if (tipo === 'sin-justificar'      && r.diasJustificados.length)     return false;
+    if (tipo === 'total-justificadas'  && r.diasNoJustificados.length)   return false;
+    return true;
+  });
 }
 
 function renderFaltasTablas(analysis, sinNada) {
   const { results, notFound } = analysis;
-  const filtroServ = document.getElementById('fServicio')?.value || '';
-  const filtered   = filtroServ ? results.filter(r => r.servicio === filtroServ) : results;
+  const filtered    = applyFiltrosFaltas(results);
+  const filtroServ  = document.getElementById('fServicio')?.value || '';
   const filtSinNada = filtroServ ? sinNada.filter(r => r.servicio === filtroServ) : sinNada;
 
   const el = document.getElementById('faltasTablas'); if (!el) return;
@@ -1871,17 +1947,25 @@ function renderFaltasTablas(analysis, sinNada) {
     tarjeta: r.tarjeta, nombre: r.nombreDB, rfc: r.rfc, servicio: r.servicio, turno: r.turno, dia: j.dia, tipo: j.tipo, detalle: j.detalle
   })));
 
+  // Helper: mostrar nombre DB con nombre del Excel como subtexto si difieren
+  const showNombre = r => {
+    const db  = esc(r.nombre  || r.nombreDB);
+    const exc = esc(r.nombreExcel || '');
+    const diff = exc && normNombreSimple(r.nombre||r.nombreDB) !== normNombreSimple(r.nombreExcel||'');
+    return diff ? `${db}<br><span style="font-size:9px;color:var(--tx3)">${exc}</span>` : db;
+  };
+
   h += `<div class="adv-card">
-    <div class="adv-card-h"><h3>Faltas justificadas (removidas)</h3><span>${justRows.length} días</span></div>
+    <div class="adv-card-h"><h3>Faltas justificadas (removidas)</h3><span>${justRows.length} días en ${new Set(justRows.map(r=>r.tarjeta)).size} personas</span></div>
     <div class="adv-table-wrap">
-    ${justRows.length ? `<table><thead><tr><th>Tarjeta</th><th>Nombre</th><th>Servicio</th><th>Turno</th><th>Día</th><th>Tipo</th><th>Cobertura</th></tr></thead><tbody>` +
+    ${justRows.length ? `<table><thead><tr><th>Tarjeta</th><th>RFC</th><th>Nombre (BD)</th><th>Servicio</th><th>Turno</th><th>Día</th><th>Tipo</th><th>Cobertura</th></tr></thead><tbody>` +
       justRows.map(r => `<tr>
-        <td class="mono acc">${esc(r.tarjeta)}</td><td>${esc(r.nombre)}</td><td>${esc(r.servicio)}</td><td>${esc(r.turno)}</td>
-        <td class="nc">${r.dia}/05/2026</td>
+        <td class="mono acc">${esc(r.tarjeta)}</td><td class="mono" style="font-size:9px">${esc(r.rfc)}</td><td>${showNombre(r)}</td><td>${esc(r.servicio)}</td><td>${esc(r.turno)}</td>
+        <td class="nc" style="white-space:nowrap">${r.dia}/05/2026</td>
         <td><span class="tipo-badge tipo-${r.tipo.replace('.','').toLowerCase().split('.')[0]}">${esc(r.tipo)}</span></td>
-        <td style="font-size:10px;color:var(--tx2)">${esc(r.detalle)}</td>
+        <td style="font-size:10px;color:var(--tx2);min-width:160px">${esc(r.detalle)}</td>
       </tr>`).join('') + '</tbody></table>'
-    : '<div class="empty-adv">No hay faltas justificadas.</div>'}
+    : '<div class="empty-adv">No hay faltas justificadas con los filtros actuales.</div>'}
     </div></div>`;
 
   // Tabla de faltas restantes (no justificadas)
@@ -1951,8 +2035,7 @@ function downloadCorregidas() {
 function downloadReporteJustificaciones() {
   if (!_faltasAnalysis || !window.XLSX) return;
   const { results } = _faltasAnalysis;
-  const filtroServ = document.getElementById('fServicio')?.value || '';
-  const filtered = filtroServ ? results.filter(r => r.servicio === filtroServ) : results;
+  const filtered = applyFiltrosFaltas(results);
 
   const head = ['Tarjeta','RFC','Nombre','Servicio','Turno','Día justificado','Tipo de cobertura','Detalle'];
   const data = [head];
@@ -1972,9 +2055,9 @@ function downloadReporteJustificaciones() {
 function downloadReporteSinNada() {
   if (!_faltasAnalysis || !window.XLSX) return;
   const { results } = _faltasAnalysis;
+  const sinNada  = buildPersonasSinNada(results);
   const filtroServ = document.getElementById('fServicio')?.value || '';
-  const sinNada    = buildPersonasSinNada(results);
-  const filtered   = filtroServ ? sinNada.filter(r => r.servicio === filtroServ) : sinNada;
+  const filtered = filtroServ ? sinNada.filter(r => r.servicio === filtroServ) : sinNada;
 
   const head = ['Tarjeta','RFC','Nombre','Servicio','Turno'];
   const data  = [head, ...filtered.map(r => [r.tarjeta, r.rfc, r.nombre, r.servicio, r.turno])];
@@ -1991,9 +2074,9 @@ function downloadReporteSinNada() {
 function genPDFFaltas() {
   if (!_faltasAnalysis || !window.jspdf?.jsPDF) { showToast('No hay análisis activo o jsPDF no cargó', 'err'); return; }
   const { results, notFound } = _faltasAnalysis;
-  const filtroServ  = document.getElementById('fServicio')?.value || '';
-  const filtered    = filtroServ ? results.filter(r => r.servicio === filtroServ) : results;
+  const filtered    = applyFiltrosFaltas(results);
   const sinNada     = buildPersonasSinNada(results);
+  const filtroServ  = document.getElementById('fServicio')?.value || '';
   const filtSinNada = filtroServ ? sinNada.filter(r => r.servicio === filtroServ) : sinNada;
 
   const { jsPDF }  = window.jspdf;
@@ -2056,6 +2139,403 @@ function genPDFFaltas() {
   PDF.footer(doc,generated);
   doc.save(`ANALISIS_FALTAS_MAYO_2026${filtroServ?'_'+PDF.safeName(filtroServ):''}.pdf`);
   showToast('PDF análisis de faltas descargado');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MÓDULO VALES — CONSTANTES
+═══════════════════════════════════════════════════════════ */
+const MES_NUM = {ENERO:1,FEBRERO:2,MARZO:3,ABRIL:4,MAYO:5,JUNIO:6,JULIO:7,AGOSTO:8,SEPTIEMBRE:9,OCTUBRE:10,NOVIEMBRE:11,DICIEMBRE:12};
+const MES_LABEL = {1:'ENE',2:'FEB',3:'MAR',4:'ABR',5:'MAY',6:'JUN',7:'JUL',8:'AGO',9:'SEP',10:'OCT',11:'NOV',12:'DIC'};
+
+// Columnas por mes en la hoja VALES
+const VALES_MESES = {
+  ENERO:   { faltas:13, oe:14, os:15, rm:16, rma:17, fac:18, lcs:19, licMed:null },
+  FEBRERO: { faltas:20, oe:21, os:22, rm:23, rma:24, fac:25, lcs:26, licMed:27 },
+  MARZO:   { faltas:28, oe:29, os:30, rm:31, rma:32, fac:33, lcs:34, licMed:35 },
+  ABRIL:   { faltas:36, oe:37, os:38, rm:39, rma:40, fac:41, lcs:42, licMed:43 },
+};
+
+/* ═══════════════════════════════════════════════════════════
+   MÓDULO VALES — PARSING
+═══════════════════════════════════════════════════════════ */
+function hasValIncidencia(v) {
+  if (v === null || v === undefined) return false;
+  const s = String(v).trim();
+  if (!s || s === '0' || s === '' || s === ' ') return false;
+  if (s.startsWith('=')) return false; // fórmula sin evaluar
+  return true;
+}
+
+function parseLastVale(v25raw, v26raw) {
+  let bestYear = 0, bestMonth = 0;
+  const tryParse = (raw, year) => {
+    if (!raw || typeof raw !== 'string' || raw.startsWith('=')) return;
+    raw.toUpperCase().split(/[\s,;/]+/).forEach(tok => {
+      const n = MES_NUM[tok.trim()];
+      if (n && (year > bestYear || (year === bestYear && n > bestMonth))) {
+        bestYear = year; bestMonth = n;
+      }
+    });
+  };
+  tryParse(v26raw, 2026);
+  tryParse(v25raw, 2025);
+  if (!bestYear) return null;
+  const mesName = Object.keys(MES_NUM).find(k => MES_NUM[k] === bestMonth) || '';
+  return { year: bestYear, month: bestMonth, label: `${mesName} ${bestYear}` };
+}
+
+function parseValesSheet(rows) {
+  // rows[6] = header, rows[7+] = data
+  const personas = [];
+  for (const r of rows.slice(7)) {
+    if (!r || r[0] == null) continue;
+    const tarjeta = String(r[0] ?? '').trim();
+    const rfc     = String(r[1] ?? '').trim();
+    const nombre  = String(r[4] ?? '').trim();
+    const categoria = String(r[7] ?? '').trim();
+    const turno   = normTurno(String(r[8] ?? '').trim());
+    if (!tarjeta || tarjeta === '0' || !nombre) continue;
+
+    // Incidencias por mes
+    const incidencias = {};
+    for (const [mes, cols] of Object.entries(VALES_MESES)) {
+      incidencias[mes] = {
+        faltas:  hasValIncidencia(r[cols.faltas]),
+        oe:      hasValIncidencia(r[cols.oe]),
+        os:      hasValIncidencia(r[cols.os]),
+        rm:      hasValIncidencia(r[cols.rm]),
+        rma:     hasValIncidencia(r[cols.rma]),
+        fac:     hasValIncidencia(r[cols.fac]),
+        lcs:     hasValIncidencia(r[cols.lcs]),
+        licMed:  cols.licMed != null ? hasValIncidencia(r[cols.licMed]) : false,
+        // Valores raw para mostrar
+        faltas_v:  r[cols.faltas],
+        oe_v:      r[cols.oe],
+        os_v:      r[cols.os],
+        rm_v:      r[cols.rm],
+        rma_v:     r[cols.rma],
+        fac_v:     r[cols.fac],
+      };
+      // ¿tiene alguna incidencia que descalifica? (faltas, OE, OS, retardos)
+      incidencias[mes].disqualify = incidencias[mes].faltas || incidencias[mes].oe || incidencias[mes].os || incidencias[mes].rm || incidencias[mes].rma;
+      // ¿tiene algo de cualquier tipo?
+      incidencias[mes].any = incidencias[mes].disqualify || incidencias[mes].fac || incidencias[mes].lcs || incidencias[mes].licMed;
+    }
+
+    const vales2025 = r[9]  && !String(r[9]).startsWith('=')  ? String(r[9]).trim()  : null;
+    const vales2026 = r[12] && !String(r[12]).startsWith('=') ? String(r[12]).trim() : null;
+    const lastVale  = parseLastVale(vales2025, vales2026);
+
+    personas.push({ tarjeta, rfc, nombre, categoria, turno, incidencias, vales2025, vales2026, lastVale });
+  }
+  return personas;
+}
+
+function computeElegibilidad(personas, evalYear, evalMonth) {
+  return personas.map(p => {
+    const motivos = [];
+
+    // 1. Incidencias en cualquier mes
+    for (const [mes, inc] of Object.entries(p.incidencias)) {
+      if (inc.disqualify) {
+        const tipos = [];
+        if (inc.faltas) tipos.push('faltas');
+        if (inc.oe)     tipos.push('omisión entrada');
+        if (inc.os)     tipos.push('omisión salida');
+        if (inc.rm)     tipos.push('retardo menor');
+        if (inc.rma)    tipos.push('retardo mayor');
+        motivos.push(`${mes}: ${tipos.join(', ')}`);
+      }
+    }
+
+    // 2. Regla de 6 meses (último vale)
+    if (p.lastVale) {
+      const mesesTranscurridos = (evalYear - p.lastVale.year) * 12 + (evalMonth - p.lastVale.month);
+      if (mesesTranscurridos < 6) {
+        motivos.push(`Vale reciente: ${p.lastVale.label} (hace ${mesesTranscurridos} mes${mesesTranscurridos !== 1 ? 'es' : ''})`);
+      }
+    }
+
+    const estado = motivos.length === 0 ? 'ELEGIBLE' :
+      motivos.some(m => !m.startsWith('Vale reciente')) ? 'NO_INCIDENCIAS' : 'NO_VALE';
+
+    return { ...p, motivos, elegible: motivos.length === 0,
+      estado: motivos.length === 0 ? 'ELEGIBLE' :
+        (motivos.some(m => m.includes(':') && !m.startsWith('Vale')) ? 'INCIDENCIAS' : 'VALE_RECIENTE')
+    };
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MÓDULO VALES — PANEL UI
+═══════════════════════════════════════════════════════════ */
+let _valesData = null;
+
+function openValesPanel() {
+  if (!DB) { alert('Espera a que cargue la base de datos.'); return; }
+  const rp = document.getElementById('rp');
+  document.getElementById('em').style.display = 'none';
+  rp.classList.add('on');
+  rp.scrollTop = 0;
+
+  const backBtn = cur ? `<button class="btn sec" onclick="pick('${esc(cur)}')">← Persona</button>` : '';
+
+  rp.innerHTML = `<div class="vales-wrap">
+    <div class="adv-head">
+      <div class="adv-title">
+        <h2>🎫 Evaluador de Vales</h2>
+        <p>Sube la <b>BASE VALES</b> (hoja <b>VALES</b>). Se evaluará elegibilidad por incidencias y regla de 6 meses.</p>
+      </div>
+      <div class="adv-actions">
+        ${backBtn}
+        <button class="btn" onclick="document.getElementById('valesFile').click()">📂 Subir Base Vales</button>
+        <input type="file" id="valesFile" accept=".xlsx" style="display:none" onchange="handleValesFile(this)">
+      </div>
+    </div>
+    <div id="valesDropzone" class="faltas-drop" onclick="document.getElementById('valesFile').click()">
+      <div class="faltas-drop-ico">🎫</div>
+      <div class="faltas-drop-txt">Haz clic o arrastra el archivo BASE VALES</div>
+      <div class="faltas-drop-sub">Debe contener la hoja "VALES"</div>
+    </div>
+    <div id="valesResult"></div>
+  </div>`;
+
+  const dz = document.getElementById('valesDropzone');
+  dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('drag-over');
+    const f = e.dataTransfer.files[0]; if (f) processValesFile(f);
+  });
+}
+
+async function handleValesFile(input) {
+  const f = input.files[0]; if (f) await processValesFile(f); input.value = '';
+}
+
+async function processValesFile(file) {
+  const res = document.getElementById('valesResult'); if (!res) return;
+  if (!window.XLSX) { res.innerHTML = `<div class="empty-adv" style="color:#e05252">SheetJS no cargó.</div>`; return; }
+  res.innerHTML = `<div class="empty-adv"><div class="spinner" style="margin:0 auto 8px"></div>Procesando ${esc(file.name)}…</div>`;
+  try {
+    const data = await file.arrayBuffer();
+    const wb   = XLSX.read(data, { type: 'array', cellDates: true });
+    if (!wb.Sheets['VALES']) throw new Error('No se encontró la hoja "VALES"');
+    const rows    = XLSX.utils.sheet_to_json(wb.Sheets['VALES'], { header:1, defval:null, raw:true });
+    const personas = parseValesSheet(rows);
+    // Fecha de evaluación: hoy
+    const hoy = new Date();
+    const evalYear = hoy.getFullYear(), evalMonth = hoy.getMonth() + 1;
+    const withEleg = computeElegibilidad(personas, evalYear, evalMonth);
+    _valesData = { personas: withEleg, evalYear, evalMonth, fileName: file.name };
+    renderValesResultado(_valesData);
+    showToast(`Análisis completado · ${personas.length} personas`);
+  } catch(e) {
+    res.innerHTML = `<div class="empty-adv" style="color:#e05252">Error: ${esc(e.message)}</div>`;
+    console.error(e);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MÓDULO VALES — RENDER
+═══════════════════════════════════════════════════════════ */
+function renderValesResultado({ personas, evalYear, evalMonth }) {
+  const res = document.getElementById('valesResult'); if (!res) return;
+
+  const total          = personas.length;
+  const elegibles      = personas.filter(p => p.elegible);
+  const noIncidencias  = personas.filter(p => p.estado === 'INCIDENCIAS');
+  const noVale         = personas.filter(p => p.estado === 'VALE_RECIENTE');
+  const pctEleg        = total ? (elegibles.length / total * 100).toFixed(0) : 0;
+
+  const categorias  = [...new Set(personas.map(p => p.categoria))].filter(Boolean).sort();
+  const turnos      = [...new Set(personas.map(p => p.turno))].filter(c => c && c !== '—').sort();
+  const porCateg    = countMap(elegibles, p => p.categoria);
+  const porCategAll = countMap(personas, p => p.categoria);
+
+  // Chart: elegibles vs total por categoría
+  const categChart = porCategAll.map(([cat, tot]) => {
+    const el = elegibles.filter(p => p.categoria === cat).length;
+    return [cat, el, tot];
+  });
+
+  res.innerHTML = `
+    <!-- KPIs -->
+    <div class="kpi-grid" style="margin-top:4px">
+      <div class="kpi kpi-teal"><div class="kpi-num">${elegibles.length}<span style="font-size:14px;margin-left:4px;font-weight:400">(${pctEleg}%)</span></div><div class="kpi-lbl">Elegibles</div><div class="kpi-sub">Sin incidencias · vale libre</div></div>
+      <div class="kpi kpi-navy"><div class="kpi-num">${total}</div><div class="kpi-lbl">Total evaluados</div><div class="kpi-sub">Personas en la base</div></div>
+      <div class="kpi kpi-amber"><div class="kpi-num">${noIncidencias.length}</div><div class="kpi-lbl">Con incidencias</div><div class="kpi-sub">Faltas, retardos u omisiones</div></div>
+      <div class="kpi kpi-slate"><div class="kpi-num">${noVale.length}</div><div class="kpi-lbl">Vale reciente</div><div class="kpi-sub">Dentro de los últimos 6 meses</div></div>
+    </div>
+
+    <!-- Charts -->
+    <div class="chart-grid-2">
+      <div class="adv-card">
+        <div class="adv-card-h"><h3>Elegibles vs Total</h3><span>${elegibles.length} de ${total}</span></div>
+        <div class="adv-card-body">${svgDonut([['Elegibles',elegibles.length],['Con incidencias',noIncidencias.length],['Vale reciente',noVale.length]], total)}</div>
+      </div>
+      <div class="adv-card">
+        <div class="adv-card-h"><h3>Elegibles por categoría</h3><span>${categorias.length} categorías</span></div>
+        <div class="adv-card-body">${renderValesCategChart(categChart)}</div>
+      </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="adv-card">
+      <div class="adv-card-h">
+        <h3>Filtros</h3>
+        <span id="valesCount" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tx2)">${total} personas</span>
+      </div>
+      <div class="faltas-filters">
+        <div class="adv-field">
+          <label>Buscar</label>
+          <input id="vQ" placeholder="Nombre, RFC o tarjeta…">
+        </div>
+        <div class="adv-field">
+          <label>Categoría</label>
+          <select id="vCateg">
+            <option value="">Todas las categorías</option>
+            ${categorias.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="adv-field">
+          <label>Turno</label>
+          <select id="vTurno">
+            <option value="">Todos los turnos</option>
+            ${turnos.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="adv-field">
+          <label>Estado</label>
+          <select id="vEstado">
+            <option value="">Todos</option>
+            <option value="ELEGIBLE">✅ Elegibles</option>
+            <option value="INCIDENCIAS">⚠️ Con incidencias</option>
+            <option value="VALE_RECIENTE">🔒 Vale reciente</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla visual -->
+    <div id="valesTabla"></div>`;
+
+  const refresh = () => renderValesTabla(personas, evalYear, evalMonth);
+  ['vQ','vCateg','vTurno','vEstado'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', refresh);
+  });
+  refresh();
+}
+
+function renderValesCategChart(data) {
+  if (!data.length) return '<div class="empty-adv">Sin datos</div>';
+  const maxTot = Math.max(...data.map(d => d[2]), 1);
+  return `<div class="vales-categ-chart">${data.map(([cat, el, tot]) => {
+    const pEl  = (el  / maxTot * 100).toFixed(1);
+    const pTot = (tot / maxTot * 100).toFixed(1);
+    const pctE = tot ? (el/tot*100).toFixed(0) : 0;
+    return `<div class="vcc-row">
+      <div class="vcc-label" title="${esc(cat)}">${esc(cat.length > 18 ? cat.slice(0,17)+'…' : cat)}</div>
+      <div class="vcc-bars">
+        <div class="vcc-bar-bg" style="width:${pTot}%"></div>
+        <div class="vcc-bar-el" style="width:${pEl}%"></div>
+      </div>
+      <div class="vcc-vals"><b>${el}</b><span>/${tot}</span><span class="vcc-pct">${pctE}%</span></div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function renderValesTabla(personas, evalYear, evalMonth) {
+  const q      = (document.getElementById('vQ')?.value || '').trim().toUpperCase();
+  const catFil = document.getElementById('vCateg')?.value  || '';
+  const turFil = document.getElementById('vTurno')?.value  || '';
+  const estFil = document.getElementById('vEstado')?.value || '';
+
+  const filtered = personas.filter(p => {
+    if (catFil && p.categoria !== catFil) return false;
+    if (turFil && p.turno     !== turFil) return false;
+    if (estFil && p.estado    !== estFil) return false;
+    if (q && !(p.tarjeta.includes(q) || p.rfc.toUpperCase().includes(q) || p.nombre.toUpperCase().includes(q))) return false;
+    return true;
+  });
+
+  const cnt = document.getElementById('valesCount');
+  if (cnt) cnt.textContent = `${filtered.length} personas`;
+
+  const el = document.getElementById('valesTabla'); if (!el) return;
+
+  const MESES_LIST = Object.keys(VALES_MESES);
+
+  el.innerHTML = `<div class="adv-card">
+    <div class="adv-card-h">
+      <h3>Detalle de elegibilidad</h3>
+      <span>${filtered.length} personas · ordenadas por estado</span>
+    </div>
+    <div class="vales-table-wrap">
+    <table class="vales-table">
+      <thead><tr>
+        <th>Estado</th>
+        <th>Tarjeta</th>
+        <th>Nombre</th>
+        <th>Categoría</th>
+        <th>Turno</th>
+        <th>Último vale</th>
+        ${MESES_LIST.map(m => `<th class="mes-th">${m.slice(0,3)}</th>`).join('')}
+        <th>Motivo</th>
+      </tr></thead>
+      <tbody>
+      ${filtered.slice().sort((a,b) => {
+        const ord = {ELEGIBLE:0, VALE_RECIENTE:1, INCIDENCIAS:2};
+        return (ord[a.estado]??3) - (ord[b.estado]??3) || a.nombre.localeCompare(b.nombre, 'es');
+      }).map(p => {
+        const estadoHtml = {
+          ELEGIBLE:      `<span class="vbadge vbadge-ok">✓ Elegible</span>`,
+          INCIDENCIAS:   `<span class="vbadge vbadge-err">✗ Incidencias</span>`,
+          VALE_RECIENTE: `<span class="vbadge vbadge-warn">⏱ Vale reciente</span>`,
+        }[p.estado] || '';
+
+        const mesesDots = MESES_LIST.map(mes => {
+          const inc = p.incidencias[mes];
+          const cleanMonth = !inc.any;
+          const hasDisq = inc.disqualify;
+          const hasInfo = !hasDisq && inc.any; // solo facilidades/licencias
+          const tipLines = [];
+          if (inc.faltas && inc.faltas_v != null) tipLines.push(`Faltas: ${inc.faltas_v}`);
+          if (inc.oe && inc.oe_v) tipLines.push(`OE: ${inc.oe_v}`);
+          if (inc.os && inc.os_v) tipLines.push(`OS: ${inc.os_v}`);
+          if (inc.rm && inc.rm_v) tipLines.push(`Ret.M: ${inc.rm_v}`);
+          if (inc.rma && inc.rma_v) tipLines.push(`Ret.Ma: ${inc.rma_v}`);
+          if (inc.fac && inc.fac_v) tipLines.push(`Fac: ${String(inc.fac_v).replace('T00:00:00.000Z','')}`);
+          const tip = tipLines.join(' · ') || (cleanMonth ? 'Sin incidencias' : 'Licencia');
+          return `<td class="mes-dot-td" title="${esc(tip)}">
+            <div class="mes-dot ${hasDisq?'dot-red':hasInfo?'dot-blue':'dot-green'}"></div>
+          </td>`;
+        }).join('');
+
+        const motivoHtml = p.motivos.length
+          ? p.motivos.map(m => `<div class="vmotivo">${esc(m)}</div>`).join('')
+          : `<div class="vmotivo vmotivo-ok">Sin observaciones</div>`;
+
+        const lastValeHtml = p.lastVale
+          ? `<span class="last-vale-badge">${esc(p.lastVale.label)}</span>`
+          : `<span style="color:var(--tx3);font-size:10px">Sin vale</span>`;
+
+        return `<tr class="vrow-${p.estado.toLowerCase()}">
+          <td>${estadoHtml}</td>
+          <td class="mono acc">${esc(p.tarjeta)}</td>
+          <td class="vnom">${esc(p.nombre)}</td>
+          <td style="font-size:10px">${esc(p.categoria)}</td>
+          <td style="font-size:10px">${esc(p.turno)}</td>
+          <td>${lastValeHtml}</td>
+          ${mesesDots}
+          <td class="vmotivo-cell">${motivoHtml}</td>
+        </tr>`;
+      }).join('')}
+      </tbody>
+    </table>
+    </div>
+  </div>`;
 }
 
 /* ── INICIO ── */

@@ -520,8 +520,120 @@ tbody tr:hover td { background: var(--soft); }
   .adv-field-wide { grid-column: span 1; }
 }
 
+/* ── BOTÓN VALES ────────────────────────────────────── */
+.btn-vales { border-color: #2f6f63; color: #2f6f63; }
+.btn-vales:hover { background: rgba(47,111,99,.08); }
+
+/* ── MÓDULO VALES ───────────────────────────────────── */
+.vales-wrap { display: flex; flex-direction: column; gap: 16px; }
+
+/* Chart categorías */
+.vales-categ-chart { display: flex; flex-direction: column; gap: 8px; }
+.vcc-row  { display: grid; grid-template-columns: 120px 1fr 80px; gap: 8px; align-items: center; }
+.vcc-label { font-size: 10px; color: var(--tx2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vcc-bars  { position: relative; height: 10px; border-radius: 5px; overflow: visible; }
+.vcc-bar-bg { position: absolute; top:0; left:0; height: 100%; background: var(--sur2); border-radius: 5px; border: 1px solid var(--brd); }
+.vcc-bar-el { position: absolute; top:0; left:0; height: 100%; background: var(--acc2); border-radius: 5px; transition: width .4s ease; }
+.vcc-vals  { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--tx2); display: flex; gap: 4px; align-items: center; }
+.vcc-vals b { color: var(--acc2); font-size: 11px; }
+.vcc-pct   { color: var(--tx3); font-size: 9px; }
+
+/* Tabla vales */
+.vales-table-wrap { overflow-x: auto; max-height: 70vh; }
+.vales-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.vales-table thead th {
+  position: sticky; top: 0; z-index: 3;
+  padding: 8px 10px; text-align: left;
+  font-family: 'IBM Plex Mono', monospace; font-size: 9px;
+  font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
+  background: var(--sur2); color: var(--tx2);
+  border-bottom: 2px solid var(--brd);
+  white-space: nowrap;
+}
+.mes-th { text-align: center; padding: 8px 4px !important; }
+.vales-table tbody tr { border-bottom: 1px solid #edf1f5; transition: background .1s; }
+.vales-table tbody tr:hover td { background: rgba(0,0,0,.015); }
+.vales-table td { padding: 7px 10px; vertical-align: middle; }
+
+/* Row color por estado */
+.vrow-elegible     td { background: rgba(47,111,99,.03); }
+.vrow-incidencias  td { background: rgba(224,82,82,.03); }
+.vrow-vale_reciente td { background: rgba(160,111,32,.03); }
+
+/* Badges de estado */
+.vbadge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 9px; border-radius: 20px;
+  font-size: 10px; font-weight: 700; font-family: 'IBM Plex Mono', monospace;
+  white-space: nowrap;
+}
+.vbadge-ok   { background: rgba(47,111,99,.12); color: var(--acc2); border: 1px solid rgba(47,111,99,.25); }
+.vbadge-err  { background: rgba(224,82,82,.1);  color: #c0392b;     border: 1px solid rgba(224,82,82,.25); }
+.vbadge-warn { background: rgba(160,111,32,.12); color: var(--amber); border: 1px solid rgba(160,111,32,.25); }
+
+/* Dots de mes */
+.mes-dot-td { text-align: center; padding: 7px 2px !important; }
+.mes-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  margin: 0 auto; cursor: default;
+  transition: transform .15s;
+}
+.mes-dot:hover { transform: scale(1.4); }
+.dot-green { background: var(--acc2); box-shadow: 0 0 0 2px rgba(47,111,99,.15); }
+.dot-red   { background: #e05252; box-shadow: 0 0 0 2px rgba(224,82,82,.15); }
+.dot-blue  { background: var(--acc); box-shadow: 0 0 0 2px rgba(31,95,139,.15); }
+
+/* Nombre en tabla */
+.vnom { max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+
+/* Badge último vale */
+.last-vale-badge {
+  display: inline-block; padding: 2px 8px;
+  background: rgba(31,95,139,.08); border: 1px solid rgba(31,95,139,.2);
+  border-radius: 8px; font-size: 9px; font-family: 'IBM Plex Mono', monospace;
+  color: var(--acc); white-space: nowrap;
+}
+
+/* Motivos */
+.vmotivo-cell { max-width: 220px; }
+.vmotivo     { font-size: 9.5px; color: var(--tx2); line-height: 1.5; }
+.vmotivo-ok  { color: var(--acc2); font-weight: 600; }
+
 /* ── ANÁLISIS DE FALTAS ─────────────────────────────── */
 .faltas-wrap { display: flex; flex-direction: column; gap: 16px; }
+
+.faltas-filters {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr 1fr;
+  gap: 12px;
+  padding: 14px 14px 16px;
+  border-top: 1px solid var(--brd);
+}
+.faltas-filters .adv-field label {
+  font-size: 9px; color: var(--tx2);
+  font-family: 'IBM Plex Mono', monospace;
+  text-transform: uppercase; letter-spacing: .07em;
+  display: block; margin-bottom: 5px;
+}
+.faltas-filters .adv-field select,
+.faltas-filters .adv-field input {
+  width: 100%;
+  background: var(--soft); border: 1.5px solid var(--brd);
+  border-radius: 8px; color: var(--tx);
+  font-size: 12px; padding: 8px 10px; outline: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+.faltas-filters .adv-field select:focus,
+.faltas-filters .adv-field input:focus {
+  border-color: var(--acc);
+  box-shadow: 0 0 0 3px rgba(31,95,139,.12);
+}
+@media (max-width: 900px) {
+  .faltas-filters { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 560px) {
+  .faltas-filters { grid-template-columns: 1fr; }
+}
 
 .faltas-drop {
   border: 2px dashed var(--brd2);
