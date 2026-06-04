@@ -2141,402 +2141,637 @@ function genPDFFaltas() {
   showToast('PDF análisis de faltas descargado');
 }
 
+
 /* ═══════════════════════════════════════════════════════════
-   MÓDULO VALES — CONSTANTES
+   MÓDULO VALES v2 — ESTADO
 ═══════════════════════════════════════════════════════════ */
-const MES_NUM = {ENERO:1,FEBRERO:2,MARZO:3,ABRIL:4,MAYO:5,JUNIO:6,JULIO:7,AGOSTO:8,SEPTIEMBRE:9,OCTUBRE:10,NOVIEMBRE:11,DICIEMBRE:12};
+const MES_NUM   = {ENERO:1,FEBRERO:2,MARZO:3,ABRIL:4,MAYO:5,JUNIO:6,JULIO:7,AGOSTO:8,SEPTIEMBRE:9,OCTUBRE:10,NOVIEMBRE:11,DICIEMBRE:12};
 const MES_LABEL = {1:'ENE',2:'FEB',3:'MAR',4:'ABR',5:'MAY',6:'JUN',7:'JUL',8:'AGO',9:'SEP',10:'OCT',11:'NOV',12:'DIC'};
 
-// Columnas por mes en la hoja VALES
-const VALES_MESES = {
-  ENERO:   { faltas:13, oe:14, os:15, rm:16, rma:17, fac:18, lcs:19, licMed:null },
-  FEBRERO: { faltas:20, oe:21, os:22, rm:23, rma:24, fac:25, lcs:26, licMed:27 },
-  MARZO:   { faltas:28, oe:29, os:30, rm:31, rma:32, fac:33, lcs:34, licMed:35 },
-  ABRIL:   { faltas:36, oe:37, os:38, rm:39, rma:40, fac:41, lcs:42, licMed:43 },
-};
+let _valesUltVale  = null;   // Map tarjetaKey → {lastVale, categoria} — solo del archivo BASE VALES
+let _valesFaltasMap= null;   // Map tarjeta → {dias,oe,os,rm,rma} — del Excel de faltas
+let _valesEvalY    = new Date().getFullYear();
+let _valesEvalM    = new Date().getMonth() + 1;
+let _valesResults  = null;   // computed
+let _valesSelKey   = null;   // tarjeta del detalle activo
 
-/* ═══════════════════════════════════════════════════════════
-   MÓDULO VALES — PARSING
-═══════════════════════════════════════════════════════════ */
-function hasValIncidencia(v) {
-  if (v === null || v === undefined) return false;
-  const s = String(v).trim();
-  if (!s || s === '0' || s === '' || s === ' ') return false;
-  if (s.startsWith('=')) return false; // fórmula sin evaluar
-  return true;
-}
-
+/* ─── Parseo BASE VALES — solo extrae último vale y categoría ─── */
 function parseLastVale(v25raw, v26raw) {
-  let bestYear = 0, bestMonth = 0;
-  const tryParse = (raw, year) => {
+  let bestY=0, bestM=0;
+  const tryParse = (raw, yr) => {
     if (!raw || typeof raw !== 'string' || raw.startsWith('=')) return;
     raw.toUpperCase().split(/[\s,;/]+/).forEach(tok => {
       const n = MES_NUM[tok.trim()];
-      if (n && (year > bestYear || (year === bestYear && n > bestMonth))) {
-        bestYear = year; bestMonth = n;
-      }
+      if (n && (yr > bestY || (yr === bestY && n > bestM))) { bestY=yr; bestM=n; }
     });
   };
-  tryParse(v26raw, 2026);
-  tryParse(v25raw, 2025);
-  if (!bestYear) return null;
-  const mesName = Object.keys(MES_NUM).find(k => MES_NUM[k] === bestMonth) || '';
-  return { year: bestYear, month: bestMonth, label: `${mesName} ${bestYear}` };
+  tryParse(v26raw, 2026); tryParse(v25raw, 2025);
+  if (!bestY) return null;
+  const mesName = Object.keys(MES_NUM).find(k=>MES_NUM[k]===bestM)||'';
+  return { year:bestY, month:bestM, label:`${mesName} ${bestY}` };
 }
 
-function parseValesSheet(rows) {
-  // rows[6] = header, rows[7+] = data
-  const personas = [];
+// Devuelve Map: tarjetaKey → { lastVale, categoria }
+function parseValesBaseUltVale(rows) {
+  const map = new Map();
   for (const r of rows.slice(7)) {
-    if (!r || r[0] == null) continue;
-    const tarjeta = String(r[0] ?? '').trim();
-    const rfc     = String(r[1] ?? '').trim();
-    const nombre  = String(r[4] ?? '').trim();
-    const categoria = String(r[7] ?? '').trim();
-    const turno   = normTurno(String(r[8] ?? '').trim());
-    if (!tarjeta || tarjeta === '0' || !nombre) continue;
-
-    // Incidencias por mes
-    const incidencias = {};
-    for (const [mes, cols] of Object.entries(VALES_MESES)) {
-      incidencias[mes] = {
-        faltas:  hasValIncidencia(r[cols.faltas]),
-        oe:      hasValIncidencia(r[cols.oe]),
-        os:      hasValIncidencia(r[cols.os]),
-        rm:      hasValIncidencia(r[cols.rm]),
-        rma:     hasValIncidencia(r[cols.rma]),
-        fac:     hasValIncidencia(r[cols.fac]),
-        lcs:     hasValIncidencia(r[cols.lcs]),
-        licMed:  cols.licMed != null ? hasValIncidencia(r[cols.licMed]) : false,
-        // Valores raw para mostrar
-        faltas_v:  r[cols.faltas],
-        oe_v:      r[cols.oe],
-        os_v:      r[cols.os],
-        rm_v:      r[cols.rm],
-        rma_v:     r[cols.rma],
-        fac_v:     r[cols.fac],
-      };
-      // ¿tiene alguna incidencia que descalifica? (faltas, OE, OS, retardos)
-      incidencias[mes].disqualify = incidencias[mes].faltas || incidencias[mes].oe || incidencias[mes].os || incidencias[mes].rm || incidencias[mes].rma;
-      // ¿tiene algo de cualquier tipo?
-      incidencias[mes].any = incidencias[mes].disqualify || incidencias[mes].fac || incidencias[mes].lcs || incidencias[mes].licMed;
-    }
-
-    const vales2025 = r[9]  && !String(r[9]).startsWith('=')  ? String(r[9]).trim()  : null;
-    const vales2026 = r[12] && !String(r[12]).startsWith('=') ? String(r[12]).trim() : null;
-    const lastVale  = parseLastVale(vales2025, vales2026);
-
-    personas.push({ tarjeta, rfc, nombre, categoria, turno, incidencias, vales2025, vales2026, lastVale });
+    if (!r || r[0]==null) continue;
+    const tarjeta  = String(r[0]??'').trim().replace(/^0+/,'')||'0';
+    const categoria= String(r[7]??'').trim();
+    const v25 = r[9]  && !String(r[9]).startsWith('=')  ? String(r[9]).trim()  : null;
+    const v26 = r[12] && !String(r[12]).startsWith('=') ? String(r[12]).trim() : null;
+    if (tarjeta) map.set(tarjeta, { lastVale: parseLastVale(v25,v26), categoria });
   }
-  return personas;
+  return map;
 }
 
-function computeElegibilidad(personas, evalYear, evalMonth) {
-  return personas.map(p => {
-    const motivos = [];
-
-    // 1. Incidencias en cualquier mes
-    for (const [mes, inc] of Object.entries(p.incidencias)) {
-      if (inc.disqualify) {
-        const tipos = [];
-        if (inc.faltas) tipos.push('faltas');
-        if (inc.oe)     tipos.push('omisión entrada');
-        if (inc.os)     tipos.push('omisión salida');
-        if (inc.rm)     tipos.push('retardo menor');
-        if (inc.rma)    tipos.push('retardo mayor');
-        motivos.push(`${mes}: ${tipos.join(', ')}`);
+/* ─── Lista de personas desde data.json ─── */
+function buildPersonasFromDB() {
+  const seen   = new Map(); // tarjetaKey → person
+  for (const [rfc, personaDB] of Object.entries(DB || {})) {
+    // Preferir fuente facilidades para datos de turno/servicio
+    for (const [src, sheets] of Object.entries(personaDB.fuentes||{})) {
+      for (const recs of Object.values(sheets||{})) {
+        for (const rec of (recs||[])) {
+          const tarjeta = guessTarjeta(rec);
+          if (!tarjeta || tarjeta==='—') continue;
+          const tKey = String(tarjeta).trim().replace(/^0+/,'')||'0';
+          if (!seen.has(tKey)) {
+            const servicio = isSrcFac(src) ? (String(rec['SERVICIO']||'').trim()||'—') : '—';
+            const turno    = isSrcFac(src) ? normTurno(String(rec['TURNO']||'').trim()) : '—';
+            seen.set(tKey, {
+              tarjeta:    String(tarjeta).trim(),
+              tarjetaKey: tKey,
+              rfc,
+              nombre:     personaDB.nombre||'—',
+              servicio,
+              turno,
+              categoria:  '—',   // se enriquece desde BASE VALES
+              lastVale:   null,  // se enriquece desde BASE VALES
+            });
+          } else if (isSrcFac(src)) {
+            // Actualizar servicio/turno si la entrada es de facilidades
+            const p = seen.get(tKey);
+            if (p.servicio==='—') p.servicio = String(rec['SERVICIO']||'').trim()||'—';
+            if (p.turno==='—')    p.turno    = normTurno(String(rec['TURNO']||'').trim());
+          }
+        }
       }
     }
+  }
+  return Array.from(seen.values());
+}
 
-    // 2. Regla de 6 meses (último vale)
+/* ─── Parseo FALTAS Excel ─── */
+function parseFaltasParaVales(rows) {
+  // Misma estructura: rows[1]=headers, rows[2+]=data
+  const map = new Map();
+  const dataRows = rows.slice(2).filter(r=>r && r[1]!=null);
+  for (const r of dataRows) {
+    const tarjeta = String(r[1]??'').trim().replace(/^0+/,'')||'0';
+    const dias    = parseFaltasDias(r[3]);
+    const oe      = r[4]!=null && String(r[4]).trim() && String(r[4]).trim()!=='0' ? String(r[4]).trim() : null;
+    const os      = r[5]!=null && String(r[5]).trim() && String(r[5]).trim()!=='0' ? String(r[5]).trim() : null;
+    const rm      = r[6]!=null && String(r[6]).trim() && String(r[6]).trim()!=='0' ? String(r[6]).trim() : null;
+    const rma     = r[7]!=null && String(r[7]).trim() && String(r[7]).trim()!=='0' ? String(r[7]).trim() : null;
+    if (dias.length || oe || os || rm || rma)
+      map.set(tarjeta, { dias, oe, os, rm, rma, nombre: String(r[2]??'').trim() });
+  }
+  return map;
+}
+
+/* ─── Incidencias desde data.json ─── */
+function getPersonaFacilidadesMes(persona, mesNombre, year) {
+  const key = `FACILIDADES ADMINISTRATIVAS ${mesNombre} ${year}`;
+  const dias = [];
+  for (const [src, sheets] of Object.entries(persona.fuentes||{})) {
+    if (!isSrcFac(src)) continue;
+    for (const recs of Object.values(sheets||{})) {
+      for (const rec of (recs||[])) {
+        const val = rec[key];
+        if (val && String(val).trim() && String(val).trim()!=='.') {
+          const exp = expandFac(val);
+          if (exp.length) dias.push(...exp);
+        }
+      }
+    }
+  }
+  return dias;
+}
+
+function getPersonaLCGSMes(persona, year, month) {
+  const mStart = new Date(year, month-1, 1);
+  const mEnd   = new Date(year, month, 0);
+  const found  = [];
+  for (const [src, sheets] of Object.entries(persona.fuentes||{})) {
+    if (!isSrcLCGS(src)) continue;
+    for (const recs of Object.values(sheets||{})) {
+      for (const rec of (recs||[])) {
+        const fi = parseDateDMY(String(rec['Fecha de Inicio']||''));
+        const ft = parseDateDMY(String(rec['Fecha de Termino']||rec['Fecha de Término']||''));
+        if (!fi) continue;
+        const end = ft||fi;
+        if (fi<=mEnd && end>=mStart)
+          found.push({ inicio: String(rec['Fecha de Inicio']||'').trim(), termino: String(rec['Fecha de Termino']||rec['Fecha de Término']||'').trim(), dias: guessDias(rec) });
+      }
+    }
+  }
+  return found;
+}
+
+function getPersonaLicMedMes(persona, year, month) {
+  const mStart = new Date(year, month-1, 1);
+  const mEnd   = new Date(year, month, 0);
+  const found  = [];
+  for (const [src, sheets] of Object.entries(persona.fuentes||{})) {
+    if (!isSrcLicMed(src)) continue;
+    for (const recs of Object.values(sheets||{})) {
+      for (const rec of (recs||[])) {
+        const d=String(rec['D']||'').trim(), m=String(rec['M']||'').trim(), aR=String(rec['A']||'').trim();
+        if (!d||!m||!aR) continue;
+        const yr  = aR.length<=2 ? 2000+parseInt(aR,10) : parseInt(aR,10);
+        const start= new Date(yr, parseInt(m,10)-1, parseInt(d,10));
+        if (isNaN(start.getTime())) continue;
+        const d2=String(rec['D_2']||d).trim(), m2=String(rec['M_2']||m).trim(), a2R=String(rec['A_2']||aR).trim();
+        const yr2  = a2R.length<=2 ? 2000+parseInt(a2R,10) : parseInt(a2R,10);
+        const end  = new Date(yr2, parseInt(m2,10)-1, parseInt(d2,10));
+        if (start<=mEnd && end>=mStart)
+          found.push({ inicio:`${d}/${m}/${yr}`, termino:`${d2}/${m2}/${yr2}`, diagnostico: String(rec['Diagnostico']||rec['# d?as']||'').trim(), dias: guessDias(rec) });
+      }
+    }
+  }
+  return found;
+}
+
+function getServicioFromDB(persona) {
+  if (!persona) return '—';
+  for (const [src, sheets] of Object.entries(persona.fuentes||{})) {
+    if (!isSrcFac(src)) continue;
+    for (const recs of Object.values(sheets||{})) {
+      for (const rec of (recs||[])) {
+        const s = String(rec['SERVICIO']||'').trim();
+        if (s) return s;
+      }
+    }
+  }
+  return '—';
+}
+
+/* ─── Cálculo de elegibilidad ─── */
+function runValesAnalysis() {
+  if (!DB) { showToast('Base de datos no cargada aún', 'warn'); return; }
+  const mesNombre = Object.keys(MES_NUM).find(k=>MES_NUM[k]===_valesEvalM) || '';
+
+  // Lista de personas desde data.json
+  const personas = buildPersonasFromDB();
+
+  // Enriquecer con último vale y categoría desde BASE VALES si está disponible
+  if (_valesUltVale) {
+    for (const p of personas) {
+      const vInfo = _valesUltVale.get(p.tarjetaKey);
+      if (vInfo) {
+        p.lastVale  = vInfo.lastVale;
+        p.categoria = vInfo.categoria || '—';
+      }
+    }
+  }
+
+  _valesResults = personas.map(p => {
+    const persona= DB[p.rfc] || null;
+    const motivos= [];
+    const detalle= {};
+
+    // 1. Vale reciente (< 6 meses) — solo si se cargó BASE VALES
     if (p.lastVale) {
-      const mesesTranscurridos = (evalYear - p.lastVale.year) * 12 + (evalMonth - p.lastVale.month);
-      if (mesesTranscurridos < 6) {
-        motivos.push(`Vale reciente: ${p.lastVale.label} (hace ${mesesTranscurridos} mes${mesesTranscurridos !== 1 ? 'es' : ''})`);
+      const ago = (_valesEvalY - p.lastVale.year)*12 + (_valesEvalM - p.lastVale.month);
+      if (ago < 6) motivos.push({ tipo:'VALE_RECIENTE', icon:'⏱', desc:`Vale en ${p.lastVale.label} (hace ${ago} mes${ago!==1?'es':''})` });
+    }
+
+    if (persona) {
+      // 2. Facilidades en el mes
+      const fac = getPersonaFacilidadesMes(persona, mesNombre, _valesEvalY);
+      if (fac.length) { detalle.facilidades=fac; motivos.push({ tipo:'FACILIDADES', icon:'📅', desc:`Facilidades en ${mesNombre}: ${fac.length} día(s)` }); }
+
+      // 3. LCGS en el mes
+      const lcgs = getPersonaLCGSMes(persona, _valesEvalY, _valesEvalM);
+      if (lcgs.length) { detalle.lcgs=lcgs; motivos.push({ tipo:'LCGS', icon:'📋', desc:`LCGS: ${lcgs.map(l=>l.inicio+'–'+l.termino).join(', ')}` }); }
+
+      // 4. Licencias médicas en el mes
+      const licMed = getPersonaLicMedMes(persona, _valesEvalY, _valesEvalM);
+      if (licMed.length) { detalle.licencias=licMed; motivos.push({ tipo:'LIC_MED', icon:'🏥', desc:`Lic. médica: ${licMed.map(l=>l.inicio+'–'+l.termino+(l.diagnostico?' ('+l.diagnostico.slice(0,30)+'...)':'')).join(', ')}` }); }
+    }
+
+    // 5. Faltas del mes (archivo subido — opcional)
+    if (_valesFaltasMap) {
+      const fi = _valesFaltasMap.get(p.tarjetaKey);
+      if (fi) {
+        detalle.faltas = fi;
+        if (fi.dias.length) motivos.push({ tipo:'FALTAS',    icon:'❌', desc:`Faltas días: ${fi.dias.join(', ')}` });
+        if (fi.oe)          motivos.push({ tipo:'OMISION_E', icon:'🔴', desc:`Omisión entrada: ${fi.oe}` });
+        if (fi.os)          motivos.push({ tipo:'OMISION_S', icon:'🔴', desc:`Omisión salida: ${fi.os}` });
+        if (fi.rm)          motivos.push({ tipo:'RETARDO_M', icon:'🟠', desc:`Retardo menor: ${fi.rm}` });
+        if (fi.rma)         motivos.push({ tipo:'RETARDO_MA',icon:'🟠', desc:`Retardo mayor: ${fi.rma}` });
       }
     }
 
-    const estado = motivos.length === 0 ? 'ELEGIBLE' :
-      motivos.some(m => !m.startsWith('Vale reciente')) ? 'NO_INCIDENCIAS' : 'NO_VALE';
-
-    return { ...p, motivos, elegible: motivos.length === 0,
-      estado: motivos.length === 0 ? 'ELEGIBLE' :
-        (motivos.some(m => m.includes(':') && !m.startsWith('Vale')) ? 'INCIDENCIAS' : 'VALE_RECIENTE')
+    return { ...p, rfcDB: p.rfc, motivos, detalle,
+      elegible: motivos.length===0,
+      estado: motivos.length===0 ? 'ELEGIBLE' :
+        motivos.some(m=>m.tipo!=='VALE_RECIENTE') ? 'INCIDENCIAS' : 'VALE_RECIENTE'
     };
   });
+
+  renderValesResultados();
+  showToast(`Análisis completado · ${_valesResults.filter(p=>p.elegible).length} elegibles de ${_valesResults.length}`);
 }
 
 /* ═══════════════════════════════════════════════════════════
-   MÓDULO VALES — PANEL UI
+   MÓDULO VALES v2 — PANEL UI
 ═══════════════════════════════════════════════════════════ */
-let _valesData = null;
-
 function openValesPanel() {
   if (!DB) { alert('Espera a que cargue la base de datos.'); return; }
+  _valesSelKey = null;
   const rp = document.getElementById('rp');
   document.getElementById('em').style.display = 'none';
-  rp.classList.add('on');
-  rp.scrollTop = 0;
+  rp.classList.add('on'); rp.scrollTop = 0;
 
+  const hoy = new Date();
+  _valesEvalY = hoy.getFullYear();
+  _valesEvalM = hoy.getMonth() + 1;
+
+  const mesOpts = Object.keys(MES_NUM).map(m=>`<option value="${MES_NUM[m]}"${MES_NUM[m]===_valesEvalM?'selected':''}>${m}</option>`).join('');
   const backBtn = cur ? `<button class="btn sec" onclick="pick('${esc(cur)}')">← Persona</button>` : '';
 
-  rp.innerHTML = `<div class="vales-wrap">
+  rp.innerHTML = `<div class="vales-wrap" id="valesWrap">
     <div class="adv-head">
       <div class="adv-title">
         <h2>🎫 Evaluador de Vales</h2>
-        <p>Sube la <b>BASE VALES</b> (hoja <b>VALES</b>). Se evaluará elegibilidad por incidencias y regla de 6 meses.</p>
+        <p>
+          <b>Fuente de incidencias:</b> los 3 Excel (facilidades, LCGS, licencias médicas) ya cargados en el sistema.<br>
+          <b>BASE VALES</b> (opcional) — solo para saber cuándo fue el último vale. <b>FALTAS</b> (opcional) — faltas y omisiones del mes.
+        </p>
       </div>
-      <div class="adv-actions">
-        ${backBtn}
-        <button class="btn" onclick="document.getElementById('valesFile').click()">📂 Subir Base Vales</button>
-        <input type="file" id="valesFile" accept=".xlsx" style="display:none" onchange="handleValesFile(this)">
+      <div class="adv-actions">${backBtn}</div>
+    </div>
+
+    <!-- Config + uploads -->
+    <div class="adv-card">
+      <div class="adv-card-h"><h3>Configuración del análisis</h3></div>
+      <div class="vales-config">
+        <div class="vconf-field">
+          <label>Mes de evaluación</label>
+          <div class="vconf-row">
+            <select id="vEvalMes" onchange="_valesEvalM=parseInt(this.value)">${mesOpts}</select>
+            <input type="number" id="vEvalAnio" value="${_valesEvalY}" min="2020" max="2030" style="width:80px" onchange="_valesEvalY=parseInt(this.value)||${_valesEvalY}">
+          </div>
+        </div>
+        <div class="vconf-field">
+          <label>BASE VALES <span class="vconf-opt">(opcional · solo para regla 6 meses)</span><br><span id="vBaseSt" class="vconf-st">— no cargada</span></label>
+          <button class="btn sec" onclick="document.getElementById('valesBaseFile').click()">📂 Subir BASE VALES</button>
+          <input type="file" id="valesBaseFile" accept=".xlsx" style="display:none" onchange="handleValesBaseUpload(this)">
+        </div>
+        <div class="vconf-field">
+          <label>FALTAS del mes <span id="vFaltasSt" class="vconf-st">— no cargada (opcional)</span></label>
+          <button class="btn sec" onclick="document.getElementById('valesFaltasFile').click()">📂 Subir FALTAS</button>
+          <input type="file" id="valesFaltasFile" accept=".xlsx" style="display:none" onchange="handleValesFaltasUpload(this)">
+        </div>
+        <div class="vconf-field vconf-run">
+          <button class="btn" id="vRunBtn" onclick="runValesAnalysis()">▶ Calcular elegibilidad</button>
+          <div style="font-size:9px;color:var(--tx3);margin-top:4px">La base viene de los 3 Excel (data.json)</div>
+        </div>
       </div>
     </div>
-    <div id="valesDropzone" class="faltas-drop" onclick="document.getElementById('valesFile').click()">
-      <div class="faltas-drop-ico">🎫</div>
-      <div class="faltas-drop-txt">Haz clic o arrastra el archivo BASE VALES</div>
-      <div class="faltas-drop-sub">Debe contener la hoja "VALES"</div>
-    </div>
+
     <div id="valesResult"></div>
   </div>`;
-
-  const dz = document.getElementById('valesDropzone');
-  dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('drag-over'); });
-  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
-  dz.addEventListener('drop', e => {
-    e.preventDefault(); dz.classList.remove('drag-over');
-    const f = e.dataTransfer.files[0]; if (f) processValesFile(f);
-  });
 }
 
-async function handleValesFile(input) {
-  const f = input.files[0]; if (f) await processValesFile(f); input.value = '';
-}
-
-async function processValesFile(file) {
-  const res = document.getElementById('valesResult'); if (!res) return;
-  if (!window.XLSX) { res.innerHTML = `<div class="empty-adv" style="color:#e05252">SheetJS no cargó.</div>`; return; }
-  res.innerHTML = `<div class="empty-adv"><div class="spinner" style="margin:0 auto 8px"></div>Procesando ${esc(file.name)}…</div>`;
+async function handleValesBaseUpload(input) {
+  const f = input.files[0]; if (!f) return; input.value='';
+  document.getElementById('vBaseSt').textContent = '⏳ cargando…';
   try {
-    const data = await file.arrayBuffer();
-    const wb   = XLSX.read(data, { type: 'array', cellDates: true });
-    if (!wb.Sheets['VALES']) throw new Error('No se encontró la hoja "VALES"');
-    const rows    = XLSX.utils.sheet_to_json(wb.Sheets['VALES'], { header:1, defval:null, raw:true });
-    const personas = parseValesSheet(rows);
-    // Fecha de evaluación: hoy
-    const hoy = new Date();
-    const evalYear = hoy.getFullYear(), evalMonth = hoy.getMonth() + 1;
-    const withEleg = computeElegibilidad(personas, evalYear, evalMonth);
-    _valesData = { personas: withEleg, evalYear, evalMonth, fileName: file.name };
-    renderValesResultado(_valesData);
-    showToast(`Análisis completado · ${personas.length} personas`);
+    const data = await f.arrayBuffer();
+    const wb   = XLSX.read(data, {type:'array', cellDates:true});
+    if (!wb.Sheets['VALES']) throw new Error('No encontré la hoja "VALES"');
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets['VALES'], {header:1, defval:null, raw:true});
+    _valesUltVale = parseValesBaseUltVale(rows);
+    const conVale = Array.from(_valesUltVale.values()).filter(v=>v.lastVale).length;
+    document.getElementById('vBaseSt').textContent = `✓ ${_valesUltVale.size} personas · ${conVale} con vale previo`;
+    document.getElementById('vBaseSt').style.color = 'var(--acc2)';
+    showToast(`BASE VALES cargada · ${conVale} personas con vale previo`);
   } catch(e) {
-    res.innerHTML = `<div class="empty-adv" style="color:#e05252">Error: ${esc(e.message)}</div>`;
-    console.error(e);
+    document.getElementById('vBaseSt').textContent = `✗ ${e.message}`;
+    document.getElementById('vBaseSt').style.color = '#e05252';
+  }
+}
+
+async function handleValesFaltasUpload(input) {
+  const f = input.files[0]; if (!f) return; input.value='';
+  document.getElementById('vFaltasSt').textContent = '⏳ cargando…';
+  try {
+    const data = await f.arrayBuffer();
+    const wb   = XLSX.read(data, {type:'array'});
+    const sheetName = wb.SheetNames.find(n=>n.toUpperCase().includes('FALT')) || wb.SheetNames[0];
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, defval:null});
+    _valesFaltasMap = parseFaltasParaVales(rows);
+    const cnt = _valesFaltasMap.size;
+    document.getElementById('vFaltasSt').textContent = `✓ ${cnt} personas con faltas (hoja: ${sheetName})`;
+    document.getElementById('vFaltasSt').style.color = 'var(--acc2)';
+    showToast(`FALTAS cargadas · ${cnt} personas`);
+  } catch(e) {
+    document.getElementById('vFaltasSt').textContent = `✗ ${e.message}`;
+    document.getElementById('vFaltasSt').style.color = '#e05252';
   }
 }
 
 /* ═══════════════════════════════════════════════════════════
-   MÓDULO VALES — RENDER
+   MÓDULO VALES v2 — RESULTADOS
 ═══════════════════════════════════════════════════════════ */
-function renderValesResultado({ personas, evalYear, evalMonth }) {
+function renderValesResultados() {
   const res = document.getElementById('valesResult'); if (!res) return;
+  const R = _valesResults;
+  if (!R) return;
 
-  const total          = personas.length;
-  const elegibles      = personas.filter(p => p.elegible);
-  const noIncidencias  = personas.filter(p => p.estado === 'INCIDENCIAS');
-  const noVale         = personas.filter(p => p.estado === 'VALE_RECIENTE');
-  const pctEleg        = total ? (elegibles.length / total * 100).toFixed(0) : 0;
+  const elegibles     = R.filter(p=>p.elegible);
+  const incidencias   = R.filter(p=>p.estado==='INCIDENCIAS');
+  const valeReciente  = R.filter(p=>p.estado==='VALE_RECIENTE');
+  const pct = R.length ? (elegibles.length/R.length*100).toFixed(0) : 0;
+  const mesNom = Object.keys(MES_NUM).find(k=>MES_NUM[k]===_valesEvalM)||'';
 
-  const categorias  = [...new Set(personas.map(p => p.categoria))].filter(Boolean).sort();
-  const turnos      = [...new Set(personas.map(p => p.turno))].filter(c => c && c !== '—').sort();
-  const porCateg    = countMap(elegibles, p => p.categoria);
-  const porCategAll = countMap(personas, p => p.categoria);
+  // Opciones de filtro
+  const categorias = [...new Set(R.map(p=>p.categoria))].filter(Boolean).sort();
+  const turnos     = [...new Set(R.map(p=>p.turno))].filter(t=>t&&t!=='—').sort();
+  const servicios  = [...new Set(R.map(p=>p.servicio))].filter(s=>s&&s!=='—').sort();
+  const tiposMotivo= [...new Set(R.flatMap(p=>p.motivos.map(m=>m.tipo)))].sort();
 
-  // Chart: elegibles vs total por categoría
-  const categChart = porCategAll.map(([cat, tot]) => {
-    const el = elegibles.filter(p => p.categoria === cat).length;
-    return [cat, el, tot];
-  });
+  // Chart por categoría
+  const byCateg = countMap(R, p=>p.categoria);
 
   res.innerHTML = `
     <!-- KPIs -->
-    <div class="kpi-grid" style="margin-top:4px">
-      <div class="kpi kpi-teal"><div class="kpi-num">${elegibles.length}<span style="font-size:14px;margin-left:4px;font-weight:400">(${pctEleg}%)</span></div><div class="kpi-lbl">Elegibles</div><div class="kpi-sub">Sin incidencias · vale libre</div></div>
-      <div class="kpi kpi-navy"><div class="kpi-num">${total}</div><div class="kpi-lbl">Total evaluados</div><div class="kpi-sub">Personas en la base</div></div>
-      <div class="kpi kpi-amber"><div class="kpi-num">${noIncidencias.length}</div><div class="kpi-lbl">Con incidencias</div><div class="kpi-sub">Faltas, retardos u omisiones</div></div>
-      <div class="kpi kpi-slate"><div class="kpi-num">${noVale.length}</div><div class="kpi-lbl">Vale reciente</div><div class="kpi-sub">Dentro de los últimos 6 meses</div></div>
+    <div class="kpi-grid">
+      <div class="kpi kpi-teal"><div class="kpi-num">${elegibles.length}<span style="font-size:13px;margin-left:5px;font-weight:400">(${pct}%)</span></div><div class="kpi-lbl">Elegibles</div><div class="kpi-sub">${mesNom} ${_valesEvalY}</div></div>
+      <div class="kpi kpi-navy"><div class="kpi-num">${R.length}</div><div class="kpi-lbl">Total evaluados</div></div>
+      <div class="kpi kpi-amber"><div class="kpi-num">${incidencias.length}</div><div class="kpi-lbl">Con incidencias</div><div class="kpi-sub">Faltas/retardos/licencias/fac.</div></div>
+      <div class="kpi kpi-slate"><div class="kpi-num">${valeReciente.length}</div><div class="kpi-lbl">Vale reciente</div><div class="kpi-sub">< 6 meses</div></div>
+      <div class="kpi kpi-slate"><div class="kpi-num">${R.filter(p=>!p.servicio||p.servicio==='—').length}</div><div class="kpi-lbl">Sin área en BD</div><div class="kpi-sub">No encontrados en facilidades</div></div>
     </div>
 
     <!-- Charts -->
     <div class="chart-grid-2">
       <div class="adv-card">
-        <div class="adv-card-h"><h3>Elegibles vs Total</h3><span>${elegibles.length} de ${total}</span></div>
-        <div class="adv-card-body">${svgDonut([['Elegibles',elegibles.length],['Con incidencias',noIncidencias.length],['Vale reciente',noVale.length]], total)}</div>
+        <div class="adv-card-h"><h3>Elegibles vs No elegibles</h3><span>${elegibles.length} / ${R.length}</span></div>
+        <div class="adv-card-body">${svgDonut([['Elegibles',elegibles.length],['Con incidencias',incidencias.length],['Vale reciente',valeReciente.length]],R.length)}</div>
       </div>
       <div class="adv-card">
-        <div class="adv-card-h"><h3>Elegibles por categoría</h3><span>${categorias.length} categorías</span></div>
-        <div class="adv-card-body">${renderValesCategChart(categChart)}</div>
+        <div class="adv-card-h"><h3>Por categoría</h3><span>${categorias.length} categorías</span></div>
+        <div class="adv-card-body">${renderValesCategChart2(byCateg, R)}</div>
       </div>
     </div>
 
-    <!-- Filtros -->
+    <!-- Filtros completos -->
     <div class="adv-card">
-      <div class="adv-card-h">
-        <h3>Filtros</h3>
-        <span id="valesCount" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tx2)">${total} personas</span>
+      <div class="adv-card-h"><h3>Filtros</h3><span id="valesFilterCount">${R.length} personas</span></div>
+      <div class="vales-filters-grid">
+        <div class="adv-field"><label>🔍 Buscar</label><input id="vQ" placeholder="Nombre, RFC, tarjeta…"></div>
+        <div class="adv-field"><label>📁 Categoría</label><select id="vCateg"><option value="">Todas</option>${categorias.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')}</select></div>
+        <div class="adv-field"><label>🕐 Turno</label><select id="vTurno"><option value="">Todos</option>${turnos.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join('')}</select></div>
+        <div class="adv-field"><label>🏥 Área / servicio</label><select id="vServicio"><option value="">Todas</option>${servicios.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('')}</select></div>
+        <div class="adv-field"><label>✅ Estado</label><select id="vEstado"><option value="">Todos</option><option value="ELEGIBLE">✅ Elegibles</option><option value="INCIDENCIAS">⚠️ Con incidencias</option><option value="VALE_RECIENTE">⏱ Vale reciente</option></select></div>
+        <div class="adv-field"><label>⚡ Motivo</label><select id="vMotivo"><option value="">Todos los motivos</option><option value="FALTAS">Faltas</option><option value="FACILIDADES">Facilidades</option><option value="LCGS">LCGS</option><option value="LIC_MED">Licencia médica</option><option value="OMISION_E">Omisión entrada</option><option value="OMISION_S">Omisión salida</option><option value="RETARDO_M">Retardo menor</option><option value="RETARDO_MA">Retardo mayor</option><option value="VALE_RECIENTE">Vale reciente</option></select></div>
+        <div class="adv-field"><label>🎫 Último vale</label><select id="vUltVale"><option value="">Todos</option><option value="sin">Sin vale previo</option><option value="con">Con vale previo</option></select></div>
+        <div class="adv-field"><label>📊 Ordenar por</label><select id="vSort"><option value="estado">Estado (elegibles primero)</option><option value="nombre">Nombre A→Z</option><option value="tarjeta">Tarjeta</option><option value="categoria">Categoría</option><option value="incidencias">Más incidencias</option></select></div>
       </div>
-      <div class="faltas-filters">
-        <div class="adv-field">
-          <label>Buscar</label>
-          <input id="vQ" placeholder="Nombre, RFC o tarjeta…">
-        </div>
-        <div class="adv-field">
-          <label>Categoría</label>
-          <select id="vCateg">
-            <option value="">Todas las categorías</option>
-            ${categorias.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')}
-          </select>
-        </div>
-        <div class="adv-field">
-          <label>Turno</label>
-          <select id="vTurno">
-            <option value="">Todos los turnos</option>
-            ${turnos.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('')}
-          </select>
-        </div>
-        <div class="adv-field">
-          <label>Estado</label>
-          <select id="vEstado">
-            <option value="">Todos</option>
-            <option value="ELEGIBLE">✅ Elegibles</option>
-            <option value="INCIDENCIAS">⚠️ Con incidencias</option>
-            <option value="VALE_RECIENTE">🔒 Vale reciente</option>
-          </select>
-        </div>
+      <div style="padding:0 14px 12px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn sec" onclick="clearValesFiltros()">↺ Limpiar filtros</button>
+        <button class="btn sec" onclick="downloadValesElegibles()">⬇ Excel elegibles</button>
+        <button class="btn sec" onclick="downloadValesCompleto()">⬇ Excel completo</button>
       </div>
     </div>
 
-    <!-- Tabla visual -->
-    <div id="valesTabla"></div>`;
+    <!-- Split view: tabla + detalle -->
+    <div id="valesSplit" class="vales-split">
+      <div id="valesTablaWrap" class="vales-tabla-wrap">
+        <div id="valesTabla"></div>
+      </div>
+      <div id="valesDetalle" class="vales-detalle hidden"></div>
+    </div>`;
 
-  const refresh = () => renderValesTabla(personas, evalYear, evalMonth);
-  ['vQ','vCateg','vTurno','vEstado'].forEach(id => {
+  const refreshV = () => renderValesTabla(R);
+  ['vQ','vCateg','vTurno','vServicio','vEstado','vMotivo','vUltVale','vSort'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', refresh);
+    if (el) el.addEventListener(el.tagName==='INPUT'?'input':'change', refreshV);
   });
-  refresh();
+  renderValesTabla(R);
 }
 
-function renderValesCategChart(data) {
-  if (!data.length) return '<div class="empty-adv">Sin datos</div>';
-  const maxTot = Math.max(...data.map(d => d[2]), 1);
-  return `<div class="vales-categ-chart">${data.map(([cat, el, tot]) => {
-    const pEl  = (el  / maxTot * 100).toFixed(1);
-    const pTot = (tot / maxTot * 100).toFixed(1);
-    const pctE = tot ? (el/tot*100).toFixed(0) : 0;
+function renderValesCategChart2(byCateg, all) {
+  const elegMap = new Map(_valesResults.filter(p=>p.elegible).map(p=>[p.categoria, (_valesResults.filter(x=>x.elegible&&x.categoria===p.categoria).length)]));
+  const maxTot = Math.max(...byCateg.map(([,v])=>v), 1);
+  return `<div class="vales-categ-chart">${byCateg.map(([cat,tot]) => {
+    const el   = _valesResults.filter(p=>p.elegible&&p.categoria===cat).length;
+    const pctE = tot?(el/tot*100).toFixed(0):0;
+    const wTot = (tot/maxTot*100).toFixed(1);
+    const wEl  = (el/maxTot*100).toFixed(1);
     return `<div class="vcc-row">
-      <div class="vcc-label" title="${esc(cat)}">${esc(cat.length > 18 ? cat.slice(0,17)+'…' : cat)}</div>
-      <div class="vcc-bars">
-        <div class="vcc-bar-bg" style="width:${pTot}%"></div>
-        <div class="vcc-bar-el" style="width:${pEl}%"></div>
-      </div>
+      <div class="vcc-label" title="${esc(cat)}">${esc(cat.length>20?cat.slice(0,19)+'…':cat)}</div>
+      <div class="vcc-bars"><div class="vcc-bar-bg" style="width:${wTot}%"></div><div class="vcc-bar-el" style="width:${wEl}%"></div></div>
       <div class="vcc-vals"><b>${el}</b><span>/${tot}</span><span class="vcc-pct">${pctE}%</span></div>
     </div>`;
   }).join('')}</div>`;
 }
 
-function renderValesTabla(personas, evalYear, evalMonth) {
-  const q      = (document.getElementById('vQ')?.value || '').trim().toUpperCase();
-  const catFil = document.getElementById('vCateg')?.value  || '';
-  const turFil = document.getElementById('vTurno')?.value  || '';
-  const estFil = document.getElementById('vEstado')?.value || '';
-
-  const filtered = personas.filter(p => {
-    if (catFil && p.categoria !== catFil) return false;
-    if (turFil && p.turno     !== turFil) return false;
-    if (estFil && p.estado    !== estFil) return false;
-    if (q && !(p.tarjeta.includes(q) || p.rfc.toUpperCase().includes(q) || p.nombre.toUpperCase().includes(q))) return false;
+function applyValesFiltros(R) {
+  const q      = (document.getElementById('vQ')?.value||'').trim().toUpperCase();
+  const catF   = document.getElementById('vCateg')?.value||'';
+  const turF   = document.getElementById('vTurno')?.value||'';
+  const serF   = document.getElementById('vServicio')?.value||'';
+  const estF   = document.getElementById('vEstado')?.value||'';
+  const motF   = document.getElementById('vMotivo')?.value||'';
+  const valeF  = document.getElementById('vUltVale')?.value||'';
+  return R.filter(p => {
+    if (catF && p.categoria!==catF) return false;
+    if (turF && p.turno!==turF)     return false;
+    if (serF && p.servicio!==serF)  return false;
+    if (estF && p.estado!==estF)    return false;
+    if (motF && !p.motivos.some(m=>m.tipo===motF)) return false;
+    if (valeF==='sin' && p.lastVale)  return false;
+    if (valeF==='con' && !p.lastVale) return false;
+    if (q && !(p.tarjeta.includes(q)||p.rfc.toUpperCase().includes(q)||p.rfcDB.toUpperCase().includes(q)||p.nombre.toUpperCase().includes(q))) return false;
     return true;
   });
+}
 
-  const cnt = document.getElementById('valesCount');
+function sortValesResults(arr) {
+  const by = document.getElementById('vSort')?.value||'estado';
+  return arr.slice().sort((a,b) => {
+    if (by==='nombre') return a.nombre.localeCompare(b.nombre,'es');
+    if (by==='tarjeta') return String(a.tarjeta).localeCompare(String(b.tarjeta),'es',{numeric:true});
+    if (by==='categoria') return a.categoria.localeCompare(b.categoria,'es')||a.nombre.localeCompare(b.nombre,'es');
+    if (by==='incidencias') return b.motivos.length - a.motivos.length || a.nombre.localeCompare(b.nombre,'es');
+    // default: estado
+    const ord={ELEGIBLE:0,VALE_RECIENTE:1,INCIDENCIAS:2};
+    return (ord[a.estado]??3)-(ord[b.estado]??3)||a.nombre.localeCompare(b.nombre,'es');
+  });
+}
+
+function clearValesFiltros() {
+  ['vQ','vCateg','vTurno','vServicio','vEstado','vMotivo','vUltVale'].forEach(id=>{
+    const el=document.getElementById(id); if(el){el.value=''; if(el.tagName==='INPUT') el.value='';}
+  });
+  renderValesTabla(_valesResults);
+}
+
+function renderValesTabla(R) {
+  const filtered = sortValesResults(applyValesFiltros(R));
+  const cnt = document.getElementById('valesFilterCount');
   if (cnt) cnt.textContent = `${filtered.length} personas`;
 
   const el = document.getElementById('valesTabla'); if (!el) return;
 
-  const MESES_LIST = Object.keys(VALES_MESES);
+  const ESTADO_HTML = {
+    ELEGIBLE:      `<span class="vbadge vbadge-ok">✓ Elegible</span>`,
+    INCIDENCIAS:   `<span class="vbadge vbadge-err">✗ Incidencias</span>`,
+    VALE_RECIENTE: `<span class="vbadge vbadge-warn">⏱ Vale reciente</span>`,
+  };
 
   el.innerHTML = `<div class="adv-card">
     <div class="adv-card-h">
-      <h3>Detalle de elegibilidad</h3>
-      <span>${filtered.length} personas · ordenadas por estado</span>
+      <h3>Detalle de elegibilidad · ${filtered.length} personas</h3>
+      <span style="font-size:10px;color:var(--tx3)">Haz clic en una fila para ver el detalle completo</span>
     </div>
     <div class="vales-table-wrap">
     <table class="vales-table">
       <thead><tr>
-        <th>Estado</th>
-        <th>Tarjeta</th>
-        <th>Nombre</th>
-        <th>Categoría</th>
-        <th>Turno</th>
-        <th>Último vale</th>
-        ${MESES_LIST.map(m => `<th class="mes-th">${m.slice(0,3)}</th>`).join('')}
-        <th>Motivo</th>
+        <th>Estado</th><th>Tarjeta</th><th>RFC</th><th>Nombre</th>
+        <th>Categoría</th><th>Turno</th><th>Área</th>
+        <th>Último vale</th><th>Incidencias</th>
       </tr></thead>
-      <tbody>
-      ${filtered.slice().sort((a,b) => {
-        const ord = {ELEGIBLE:0, VALE_RECIENTE:1, INCIDENCIAS:2};
-        return (ord[a.estado]??3) - (ord[b.estado]??3) || a.nombre.localeCompare(b.nombre, 'es');
-      }).map(p => {
-        const estadoHtml = {
-          ELEGIBLE:      `<span class="vbadge vbadge-ok">✓ Elegible</span>`,
-          INCIDENCIAS:   `<span class="vbadge vbadge-err">✗ Incidencias</span>`,
-          VALE_RECIENTE: `<span class="vbadge vbadge-warn">⏱ Vale reciente</span>`,
-        }[p.estado] || '';
-
-        const mesesDots = MESES_LIST.map(mes => {
-          const inc = p.incidencias[mes];
-          const cleanMonth = !inc.any;
-          const hasDisq = inc.disqualify;
-          const hasInfo = !hasDisq && inc.any; // solo facilidades/licencias
-          const tipLines = [];
-          if (inc.faltas && inc.faltas_v != null) tipLines.push(`Faltas: ${inc.faltas_v}`);
-          if (inc.oe && inc.oe_v) tipLines.push(`OE: ${inc.oe_v}`);
-          if (inc.os && inc.os_v) tipLines.push(`OS: ${inc.os_v}`);
-          if (inc.rm && inc.rm_v) tipLines.push(`Ret.M: ${inc.rm_v}`);
-          if (inc.rma && inc.rma_v) tipLines.push(`Ret.Ma: ${inc.rma_v}`);
-          if (inc.fac && inc.fac_v) tipLines.push(`Fac: ${String(inc.fac_v).replace('T00:00:00.000Z','')}`);
-          const tip = tipLines.join(' · ') || (cleanMonth ? 'Sin incidencias' : 'Licencia');
-          return `<td class="mes-dot-td" title="${esc(tip)}">
-            <div class="mes-dot ${hasDisq?'dot-red':hasInfo?'dot-blue':'dot-green'}"></div>
-          </td>`;
-        }).join('');
-
-        const motivoHtml = p.motivos.length
-          ? p.motivos.map(m => `<div class="vmotivo">${esc(m)}</div>`).join('')
-          : `<div class="vmotivo vmotivo-ok">Sin observaciones</div>`;
-
-        const lastValeHtml = p.lastVale
-          ? `<span class="last-vale-badge">${esc(p.lastVale.label)}</span>`
-          : `<span style="color:var(--tx3);font-size:10px">Sin vale</span>`;
-
-        return `<tr class="vrow-${p.estado.toLowerCase()}">
-          <td>${estadoHtml}</td>
+      <tbody>${filtered.map(p => {
+        const sel = _valesSelKey === p.tarjetaKey;
+        const lv  = p.lastVale ? `<span class="last-vale-badge">${esc(p.lastVale.label)}</span>` : `<span style="color:var(--tx3);font-size:10px">Sin vale</span>`;
+        const motHtml = p.motivos.length
+          ? p.motivos.map(m=>`<div class="vmotivo">${m.icon} ${esc(m.desc)}</div>`).join('')
+          : `<div class="vmotivo vmotivo-ok">✓ Sin observaciones</div>`;
+        return `<tr class="vrow-${p.estado.toLowerCase()} vrow-clickable${sel?' vrow-sel':''}" onclick="selectValesPerson('${esc(p.tarjetaKey)}')">
+          <td>${ESTADO_HTML[p.estado]||''}</td>
           <td class="mono acc">${esc(p.tarjeta)}</td>
-          <td class="vnom">${esc(p.nombre)}</td>
+          <td class="mono" style="font-size:9px">${esc(p.rfcDB)}</td>
+          <td class="vnom" title="${esc(p.nombre)}">${esc(p.nombre)}</td>
           <td style="font-size:10px">${esc(p.categoria)}</td>
           <td style="font-size:10px">${esc(p.turno)}</td>
-          <td>${lastValeHtml}</td>
-          ${mesesDots}
-          <td class="vmotivo-cell">${motivoHtml}</td>
+          <td style="font-size:10px">${esc(p.servicio)}</td>
+          <td>${lv}</td>
+          <td class="vmotivo-cell">${motHtml}</td>
         </tr>`;
-      }).join('')}
-      </tbody>
+      }).join('')}</tbody>
     </table>
     </div>
   </div>`;
 }
 
+function selectValesPerson(tarjetaKey) {
+  _valesSelKey = tarjetaKey;
+  const persona = _valesResults?.find(p=>p.tarjetaKey===tarjetaKey);
+  if (!persona) return;
+
+  // Mark selected row
+  document.querySelectorAll('.vrow-clickable').forEach(r => r.classList.remove('vrow-sel'));
+  document.querySelectorAll(`.vrow-clickable`).forEach(r => {
+    if (r.onclick?.toString().includes(`'${tarjetaKey}'`)) r.classList.add('vrow-sel');
+  });
+
+  const det = document.getElementById('valesDetalle'); if (!det) return;
+  det.classList.remove('hidden');
+  document.getElementById('valesSplit').classList.add('has-detail');
+
+  const ESTADO_HTML = {
+    ELEGIBLE:      `<div class="vdet-estado vdet-ok">✓ ELEGIBLE</div>`,
+    INCIDENCIAS:   `<div class="vdet-estado vdet-err">✗ NO ELEGIBLE — Incidencias</div>`,
+    VALE_RECIENTE: `<div class="vdet-estado vdet-warn">⏱ NO ELEGIBLE — Vale reciente</div>`,
+  };
+
+  const lv = persona.lastVale
+    ? `<span class="last-vale-badge" style="font-size:11px">${esc(persona.lastVale.label)}</span>`
+    : `<span style="color:var(--tx3)">Sin vale previo registrado</span>`;
+
+  let incHtml = '';
+  if (persona.detalle.faltas) {
+    const f = persona.detalle.faltas;
+    if (f.dias.length) incHtml += `<div class="vdet-inc"><span class="vdet-ico">❌</span><div><b>Faltas</b><br>Días: ${f.dias.join(', ')}</div></div>`;
+    if (f.oe) incHtml += `<div class="vdet-inc"><span class="vdet-ico">🔴</span><div><b>Omisión de entrada</b><br>${esc(f.oe)}</div></div>`;
+    if (f.os) incHtml += `<div class="vdet-inc"><span class="vdet-ico">🔴</span><div><b>Omisión de salida</b><br>${esc(f.os)}</div></div>`;
+    if (f.rm) incHtml += `<div class="vdet-inc"><span class="vdet-ico">🟠</span><div><b>Retardo menor</b><br>${esc(f.rm)}</div></div>`;
+    if (f.rma) incHtml += `<div class="vdet-inc"><span class="vdet-ico">🟠</span><div><b>Retardo mayor</b><br>${esc(f.rma)}</div></div>`;
+  }
+  if (persona.detalle.facilidades?.length) {
+    incHtml += `<div class="vdet-inc"><span class="vdet-ico">📅</span><div><b>Facilidades administrativas</b><br>Días: ${persona.detalle.facilidades.join(', ')}</div></div>`;
+  }
+  if (persona.detalle.lcgs?.length) {
+    persona.detalle.lcgs.forEach(l => {
+      incHtml += `<div class="vdet-inc"><span class="vdet-ico">📋</span><div><b>Licencia con goce de sueldo</b><br>${esc(l.inicio)} – ${esc(l.termino)}${l.dias&&l.dias!=='—'?' ('+l.dias+' días)':''}</div></div>`;
+    });
+  }
+  if (persona.detalle.licencias?.length) {
+    persona.detalle.licencias.forEach(l => {
+      incHtml += `<div class="vdet-inc"><span class="vdet-ico">🏥</span><div><b>Licencia médica</b><br>${esc(l.inicio)} – ${esc(l.termino)}<br><span style="font-size:9px;color:var(--tx3)">${esc(l.diagnostico)}</span></div></div>`;
+    });
+  }
+  if (persona.lastVale && persona.motivos.some(m=>m.tipo==='VALE_RECIENTE')) {
+    const ago = (_valesEvalY-persona.lastVale.year)*12+(_valesEvalM-persona.lastVale.month);
+    incHtml += `<div class="vdet-inc"><span class="vdet-ico">⏱</span><div><b>Vale reciente</b><br>Recibió vale en ${esc(persona.lastVale.label)} (hace ${ago} meses). Mínimo requerido: 6 meses.</div></div>`;
+  }
+  if (!incHtml) incHtml = `<div class="vdet-ok-msg">✓ No se detectaron incidencias en ${Object.keys(MES_NUM).find(k=>MES_NUM[k]===_valesEvalM)} ${_valesEvalY}.</div>`;
+
+  det.innerHTML = `<div class="vdet-header">
+    <button class="vdet-close" onclick="closeValesDetalle()">✕</button>
+    <div class="av" style="width:42px;height:42px;font-size:14px;border-radius:10px;flex-shrink:0">${esc(getIni(persona.nombre))}</div>
+    <div style="flex:1;min-width:0">
+      <div class="pi-nom" style="font-size:16px">${esc(persona.nombre)}</div>
+      <div style="font-size:11px;color:var(--tx2)">Tarjeta: <b>${esc(persona.tarjeta)}</b> · RFC: <b>${esc(persona.rfcDB)}</b></div>
+      <div style="font-size:11px;color:var(--tx2)">${esc(persona.categoria)} · ${esc(persona.turno)}${persona.servicio&&persona.servicio!=='—'?' · '+esc(persona.servicio):''}</div>
+    </div>
+  </div>
+  ${ESTADO_HTML[persona.estado]||''}
+  <div class="vdet-section">
+    <div class="vdet-lbl">Último vale</div>
+    ${lv}
+  </div>
+  <div class="vdet-section">
+    <div class="vdet-lbl">Incidencias detectadas en ${Object.keys(MES_NUM).find(k=>MES_NUM[k]===_valesEvalM)||''} ${_valesEvalY}</div>
+    ${incHtml}
+  </div>
+  ${persona.rfcDB&&persona.rfcDB!=='—'?`<div class="vdet-section">
+    <button class="btn sec" style="width:100%;margin-top:4px" onclick="pick('${esc(persona.rfcDB)}');showToast('Abriendo ficha…')">📋 Ver ficha completa en BD</button>
+  </div>`:''}`;
+}
+
+function closeValesDetalle() {
+  _valesSelKey = null;
+  document.getElementById('valesDetalle')?.classList.add('hidden');
+  document.getElementById('valesSplit')?.classList.remove('has-detail');
+  document.querySelectorAll('.vrow-sel').forEach(r=>r.classList.remove('vrow-sel'));
+}
+
+/* ─── Descargas ─── */
+function downloadValesElegibles() {
+  if (!_valesResults||!window.XLSX) return;
+  const filt = applyValesFiltros(_valesResults).filter(p=>p.elegible);
+  const head = ['Tarjeta','RFC','Nombre','Categoría','Turno','Área','Último vale'];
+  const data = [head, ...filt.map(p=>[p.tarjeta,p.rfcDB,p.nombre,p.categoria,p.turno,p.servicio,p.lastVale?.label||'Sin vale'])];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(data),'Elegibles');
+  XLSX.writeFile(wb,`VALES_ELEGIBLES_${Object.keys(MES_NUM).find(k=>MES_NUM[k]===_valesEvalM)}_${_valesEvalY}.xlsx`);
+  showToast(`Excel elegibles · ${filt.length} personas`);
+}
+
+function downloadValesCompleto() {
+  if (!_valesResults||!window.XLSX) return;
+  const filt = applyValesFiltros(_valesResults);
+  const head = ['Tarjeta','RFC','Nombre','Categoría','Turno','Área','Estado','Último vale','Motivos'];
+  const data = [head, ...filt.map(p=>[p.tarjeta,p.rfcDB,p.nombre,p.categoria,p.turno,p.servicio,p.estado,p.lastVale?.label||'Sin vale',p.motivos.map(m=>m.desc).join(' | ')])];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(data),'Vales completo');
+  XLSX.writeFile(wb,`VALES_COMPLETO_${Object.keys(MES_NUM).find(k=>MES_NUM[k]===_valesEvalM)}_${_valesEvalY}.xlsx`);
+  showToast(`Excel completo · ${filt.length} personas`);
+}
 /* ── INICIO ── */
 loadData();

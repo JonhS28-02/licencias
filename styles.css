@@ -524,6 +524,153 @@ tbody tr:hover td { background: var(--soft); }
 .btn-vales { border-color: #2f6f63; color: #2f6f63; }
 .btn-vales:hover { background: rgba(47,111,99,.08); }
 
+/* ── CONFIG VALES ───────────────────────────────────── */
+.vales-config {
+  display: grid;
+  grid-template-columns: auto auto auto 1fr;
+  gap: 16px 24px;
+  padding: 14px 16px 16px;
+  align-items: end;
+  flex-wrap: wrap;
+}
+.vconf-field { display: flex; flex-direction: column; gap: 5px; }
+.vconf-field label {
+  font-size: 9px; text-transform: uppercase; letter-spacing: .07em;
+  color: var(--tx2); font-family: 'IBM Plex Mono', monospace;
+}
+.vconf-row { display: flex; gap: 6px; }
+.vconf-row select, .vconf-row input {
+  padding: 8px 10px; border: 1.5px solid var(--brd); border-radius: 8px;
+  background: var(--soft); color: var(--tx); font-size: 12px; outline: none;
+}
+.vconf-run { justify-content: flex-end; }
+.vconf-st  { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--tx3); }
+.vconf-opt { font-size: 9px; color: var(--tx3); font-weight: 400; }
+@media (max-width: 900px) { .vales-config { grid-template-columns: 1fr 1fr; } }
+
+/* ── FILTROS VALES ──────────────────────────────────── */
+.vales-filters-grid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr 1fr;
+  gap: 10px 12px;
+  padding: 14px 14px 0;
+}
+.vales-filters-grid .adv-field select,
+.vales-filters-grid .adv-field input {
+  width: 100%;
+  padding: 8px 10px; border: 1.5px solid var(--brd); border-radius: 8px;
+  background: var(--soft); color: var(--tx); font-size: 11px; outline: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+.vales-filters-grid .adv-field select:focus,
+.vales-filters-grid .adv-field input:focus {
+  border-color: var(--acc);
+  box-shadow: 0 0 0 3px rgba(31,95,139,.1);
+}
+.vales-filters-grid .adv-field label {
+  font-size: 9px; text-transform: uppercase; letter-spacing: .07em;
+  color: var(--tx2); font-family: 'IBM Plex Mono', monospace; display: block; margin-bottom: 4px;
+}
+@media (max-width: 1100px) { .vales-filters-grid { grid-template-columns: 1fr 1fr 1fr; } }
+@media (max-width: 700px)  { .vales-filters-grid { grid-template-columns: 1fr 1fr; } }
+
+/* ── SPLIT VIEW ─────────────────────────────────────── */
+.vales-split { display: flex; gap: 14px; align-items: flex-start; }
+.vales-tabla-wrap { flex: 1; min-width: 0; }
+.vales-detalle {
+  width: 340px; flex-shrink: 0;
+  background: var(--sur); border: 1px solid var(--brd);
+  border-radius: 14px; box-shadow: var(--shadow-lg);
+  position: sticky; top: 10px;
+  overflow-y: auto; max-height: 80vh;
+}
+.vales-detalle.hidden { display: none; }
+.vales-split.has-detail .vales-tabla-wrap { flex: 1; }
+@media (max-width: 900px) {
+  .vales-split { flex-direction: column; }
+  .vales-detalle { width: 100%; position: static; max-height: none; }
+}
+
+/* ── TABLA VALES ────────────────────────────────────── */
+.vales-table-wrap { overflow-x: auto; max-height: 65vh; }
+.vales-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.vales-table thead th {
+  position: sticky; top: 0; z-index: 3;
+  padding: 8px 10px; background: var(--sur2); color: var(--tx2);
+  font-family: 'IBM Plex Mono', monospace; font-size: 9px;
+  font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
+  border-bottom: 2px solid var(--brd); white-space: nowrap; text-align: left;
+}
+.vales-table tbody tr { border-bottom: 1px solid #edf1f5; }
+.vrow-clickable { cursor: pointer; transition: background .1s; }
+.vrow-clickable:hover td { background: rgba(31,95,139,.04) !important; }
+.vrow-sel td { background: rgba(31,95,139,.08) !important; }
+.vrow-elegible     td { background: rgba(47,111,99,.03); }
+.vrow-incidencias  td { background: rgba(224,82,82,.03); }
+.vrow-vale_reciente td { background: rgba(160,111,32,.03); }
+.vales-table td { padding: 7px 10px; vertical-align: middle; }
+.vnom { max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+.vmotivo-cell { max-width: 260px; }
+.vmotivo     { font-size: 9.5px; color: var(--tx2); line-height: 1.6; }
+.vmotivo-ok  { color: var(--acc2); font-weight: 600; }
+
+/* ── PANEL DETALLE PERSONA ──────────────────────────── */
+.vdet-header {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 14px 14px 10px; border-bottom: 1px solid var(--brd);
+  position: relative;
+}
+.vdet-close {
+  position: absolute; top: 10px; right: 10px;
+  background: none; border: none; color: var(--tx3);
+  font-size: 14px; cursor: pointer; padding: 4px;
+}
+.vdet-close:hover { color: var(--tx); }
+.vdet-estado {
+  padding: 10px 14px; font-size: 12px; font-weight: 700;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.vdet-ok   { background: rgba(47,111,99,.08);  color: var(--acc2); border-bottom: 1px solid rgba(47,111,99,.15); }
+.vdet-err  { background: rgba(224,82,82,.07);  color: #c0392b;     border-bottom: 1px solid rgba(224,82,82,.15); }
+.vdet-warn { background: rgba(160,111,32,.07); color: var(--amber); border-bottom: 1px solid rgba(160,111,32,.15); }
+.vdet-section { padding: 12px 14px; border-bottom: 1px solid var(--brd); }
+.vdet-lbl { font-size: 9px; color: var(--tx3); font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 8px; }
+.vdet-inc {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 7px 0; border-bottom: 1px solid #edf1f5;
+  font-size: 11px;
+}
+.vdet-inc:last-child { border-bottom: none; }
+.vdet-ico { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+.vdet-ok-msg { color: var(--acc2); font-size: 11px; font-weight: 600; padding: 6px 0; }
+
+/* Badges reutilizados */
+.vbadge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 9px; border-radius: 20px;
+  font-size: 10px; font-weight: 700; font-family: 'IBM Plex Mono', monospace;
+  white-space: nowrap;
+}
+.vbadge-ok   { background: rgba(47,111,99,.12); color: var(--acc2); border: 1px solid rgba(47,111,99,.25); }
+.vbadge-err  { background: rgba(224,82,82,.1);  color: #c0392b;     border: 1px solid rgba(224,82,82,.25); }
+.vbadge-warn { background: rgba(160,111,32,.12); color: var(--amber); border: 1px solid rgba(160,111,32,.25); }
+.last-vale-badge {
+  display: inline-block; padding: 2px 8px;
+  background: rgba(31,95,139,.08); border: 1px solid rgba(31,95,139,.2);
+  border-radius: 8px; font-size: 9px; font-family: 'IBM Plex Mono', monospace; color: var(--acc);
+}
+
+/* Charts categoría */
+.vales-categ-chart { display: flex; flex-direction: column; gap: 8px; }
+.vcc-row  { display: grid; grid-template-columns: 120px 1fr 80px; gap: 8px; align-items: center; }
+.vcc-label { font-size: 10px; color: var(--tx2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vcc-bars  { position: relative; height: 10px; border-radius: 5px; }
+.vcc-bar-bg { position: absolute; top:0; left:0; height:100%; background: var(--sur2); border-radius:5px; border:1px solid var(--brd); }
+.vcc-bar-el { position: absolute; top:0; left:0; height:100%; background: var(--acc2); border-radius:5px; transition:width .4s; }
+.vcc-vals  { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--tx2); display:flex; gap:4px; align-items:center; }
+.vcc-vals b { color:var(--acc2); font-size:11px; }
+.vcc-pct   { color:var(--tx3); font-size:9px; }
+
 /* ── MÓDULO VALES ───────────────────────────────────── */
 .vales-wrap { display: flex; flex-direction: column; gap: 16px; }
 
