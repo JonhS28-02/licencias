@@ -200,7 +200,7 @@ header {
 .ri:hover { background: var(--sur2); }
 .ri.act   { background: #eef5fa; border-left: 3px solid var(--acc); padding-left: 7px; }
 .ri-rfc   { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--acc); min-width: 96px; flex-shrink: 0; }
-.ri-nom   { font-size: 10px; color: var(--tx2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ri-nom   { font-size: 10px; color: var(--tx2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
 .ri-dots  { display: flex; gap: 3px; margin-left: auto; flex-shrink: 0; }
 .rdot     { width: 6px; height: 6px; border-radius: 50%; background: var(--acc); }
 
@@ -879,6 +879,74 @@ tbody tr:hover td { background: var(--soft); }
 }
 /* Hacemos las cards de meses un poco más anchas para que quepa el cal */
 .mes-card { min-width: 130px; }
+
+/* ── NOMBRES LARGOS EN TABLAS AVANZADAS ─────────────── */
+.nom-cell {
+  max-width: 170px; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ── BANNER ACTIVIDAD RECIENTE ──────────────────────── */
+.recent-activity-banner {
+  background: linear-gradient(135deg, #fffbea 0%, #fff3cc 100%);
+  border: 2px solid var(--amber);
+  border-radius: 12px;
+  padding: 14px 16px 12px;
+  margin-bottom: 16px;
+  position: relative;
+  box-shadow: 0 2px 10px rgba(160,108,32,.15);
+}
+.recent-activity-banner::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0; width: 5px;
+  background: var(--amber);
+  border-radius: 12px 0 0 12px;
+}
+.rab-title {
+  font-size: 12px; font-weight: 700;
+  color: #7a5000;
+  letter-spacing: .03em;
+  margin-bottom: 10px;
+  display: flex; align-items: center; gap: 6px;
+}
+.rab-cols {
+  display: flex; gap: 12px; flex-wrap: wrap;
+}
+.rab-group {
+  flex: 1; min-width: 200px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--brd);
+}
+.rab-curr {
+  border-color: #e0a000;
+  box-shadow: 0 0 0 3px rgba(160,108,32,.12);
+}
+.rab-month-label {
+  font-size: 11px; font-weight: 700;
+  color: var(--tx);
+  margin-bottom: 7px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--brd);
+}
+.rab-curr .rab-month-label { color: #7a5000; }
+.rab-item {
+  display: flex; align-items: baseline;
+  gap: 7px; padding: 4px 0;
+  border-bottom: 1px solid var(--soft);
+}
+.rab-item:last-child { border-bottom: none; }
+.rab-tipo {
+  font-size: 10px; font-weight: 700;
+  font-family: 'IBM Plex Mono', monospace;
+  flex-shrink: 0; white-space: nowrap;
+}
+.rab-det { font-size: 10px; color: var(--tx2); line-height: 1.4; }
+.rab-amber .rab-tipo { color: var(--amber); }
+.rab-teal  .rab-tipo { color: var(--acc2); }
+.rab-navy  .rab-tipo { color: var(--acc); }
 
 /* ── TABLAS CON ENCABEZADO STICKY ───────────────────── */
 .adv-table-wrap thead th {

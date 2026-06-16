@@ -7,6 +7,13 @@
 let DB = null, hist = [], cur = null, acItems = [], acIdx = -1;
 let _eventosCache = null;
 let _sinNadaCache = null;
+let _tarjetaRFCMap = null;   // Map tarjetaKey → rfc  (índice inverso para búsqueda)
+// Faltas — mes/año dinámico (por defecto Mayo 2026)
+let _faltasMes  = 5;
+let _faltasAnio = 2026;
+// Vales — lista de nombres desde Excel
+let _valesNombresFilter  = null;   // Set de tarjetaKeys, null = todos
+let _valesNombresNoMatch = [];
 
 /* Toast notifications */
 function showToast(msg, type = 'ok') {
@@ -124,6 +131,19 @@ async function loadData() {
     document.getElementById('sr').textContent = tr.toLocaleString('es-MX');
     document.getElementById('ld').style.display = 'none';
     document.getElementById('em').style.display = 'flex';
+    // Construir índice inverso tarjeta → RFC para búsqueda
+    _tarjetaRFCMap = new Map();
+    for (const [rfc, p] of Object.entries(DB)) {
+      for (const sheets of Object.values(p.fuentes || {}))
+        for (const recs of Object.values(sheets || {}))
+          for (const rec of (recs || [])) {
+            const t = guessTarjeta(rec);
+            if (t && t !== '—') {
+              const tk = String(t).trim().replace(/^0+/, '') || '0';
+              if (!_tarjetaRFCMap.has(tk)) _tarjetaRFCMap.set(tk, rfc);
+            }
+          }
+    }
     setupSearch();
   } catch(e) {
     document.getElementById('ld').innerHTML = `<span style="color:#e05252;font-size:12px">Error: ${e.message}</span>`;
@@ -139,6 +159,15 @@ function setupSearch() {
   const ac  = document.getElementById('ac');
   const sc  = document.getElementById('sc');
 
+  // Event delegation — se registra UNA sola vez; no depende de re-renders del input
+  ac.addEventListener('mousedown', e => {
+    const item = e.target.closest('.aci[data-rfc]');
+    if (!item) return;
+    e.preventDefault();
+    pick(item.dataset.rfc);
+    inp.value = ''; sc.style.display = 'none';
+  });
+
   inp.addEventListener('input', () => {
     const q = inp.value.trim().toUpperCase();
     sc.style.display = q ? 'block' : 'none';
@@ -146,16 +175,19 @@ function setupSearch() {
     const res = searchDB(q, 14);
     if (!res.length) { hideAC(); return; }
     acItems = res; acIdx = -1;
-    ac.innerHTML = res.map((p, i) => `
-      <div class="aci" data-rfc="${esc(p.rfc)}" data-i="${i}">
-        <div class="aci-rfc">${hl(p.rfc, q)}</div>
-        <div class="aci-nom">${hl(p.nombre || '(sin nombre)', q)}</div>
+    ac.innerHTML = res.map((p, i) => {
+      const tarjetaBadge = p._matchTarjeta
+        ? `<span class="aci-tarjeta">🪪 ${hl(p._matchTarjeta, q.replace(/^0+/,''))}</span>`
+        : '';
+      return `<div class="aci" data-rfc="${esc(p.rfc)}" data-i="${i}">
+        <div class="aci-rfc-row">
+          <span class="aci-rfc">${hl(p.rfc, q)}</span>
+          ${tarjetaBadge}
+        </div>
+        <div class="aci-nom">${hl(fmtNombre(p.nombre) || '(sin nombre)', q)}</div>
         <div class="aci-tags">${Object.keys(p.fuentes).map(s => `<span class="tag">${srcDisplayName(s).split(' ')[0]}</span>`).join('')}</div>
-      </div>`).join('');
-    ac.querySelectorAll('.aci').forEach(el => el.addEventListener('mousedown', e => {
-      e.preventDefault(); pick(el.dataset.rfc);
-      inp.value = ''; sc.style.display = 'none';
-    }));
+      </div>`;
+    }).join('');
     // Pie con total de resultados
     const total = searchDB(q, 9999).length;
     if (total > res.length) {
@@ -194,12 +226,39 @@ function setupSearch() {
 function hideAC() { document.getElementById('ac').style.display = 'none'; acItems = []; acIdx = -1; }
 
 function searchDB(q, lim) {
-  const res = [];
+  const res  = [];
+  const seen = new Set();
+
+  // Búsqueda por tarjeta (si la query tiene dígitos)
+  if (_tarjetaRFCMap && /^\d+/.test(q)) {
+    const qNum = q.replace(/^0+/, '') || '0';
+    for (const [tk, rfc] of _tarjetaRFCMap.entries()) {
+      if (res.length >= lim) break;
+      if ((tk === qNum || tk.startsWith(qNum)) && !seen.has(rfc)) {
+        const d = DB[rfc]; if (!d) continue;
+        seen.add(rfc);
+        // Adjuntar la tarjeta para mostrar en autocomplete
+        res.push({ ...d, _matchTarjeta: tk });
+      }
+    }
+  }
+
+  // Búsqueda por RFC y nombre
   for (const [rfc, d] of Object.entries(DB)) {
     if (res.length >= lim) break;
-    if (rfc.includes(q) || (d.nombre && d.nombre.toUpperCase().includes(q))) res.push(d);
+    if (seen.has(rfc)) continue;
+    if (rfc.includes(q) || (d.nombre && d.nombre.toUpperCase().includes(q))) {
+      seen.add(rfc);
+      res.push(d);
+    }
   }
-  res.sort((a, b) => (a.rfc.startsWith(q) ? 0 : 1) - (b.rfc.startsWith(q) ? 0 : 1));
+
+  // Priorizar coincidencias exactas al inicio
+  res.sort((a, b) => {
+    const aExact = a.rfc.startsWith(q) || (a._matchTarjeta && (a._matchTarjeta === q.replace(/^0+/,''))) ? 0 : 1;
+    const bExact = b.rfc.startsWith(q) || (b._matchTarjeta && (b._matchTarjeta === q.replace(/^0+/,''))) ? 0 : 1;
+    return aExact - bExact;
+  });
   return res.slice(0, lim);
 }
 
@@ -228,10 +287,88 @@ function renderSide() {
     const dots = Object.keys(p.fuentes).map(s => `<div class="rdot" style="background:${srcColor(s)}"></div>`).join('');
     return `<div class="ri ${r === cur ? 'act' : ''}" onclick="pick('${esc(r)}')">
       <span class="ri-rfc">${esc(r)}</span>
-      <span class="ri-nom">${esc(p.nombre || '—')}</span>
+      <span class="ri-nom">${esc(fmtNombre(p.nombre) || '—')}</span>
       <div class="ri-dots">${dots}</div>
     </div>`;
   }).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ACTIVIDAD RECIENTE — MES ACTUAL Y MES ANTERIOR
+═══════════════════════════════════════════════════════════ */
+function getRecentActivity(p) {
+  const now  = new Date();
+  const curY = now.getFullYear(), curM = now.getMonth() + 1;
+  const prevM = curM === 1 ? 12 : curM - 1;
+  const prevY = curM === 1 ? curY - 1 : curY;
+  const months = [
+    { m: curM,  y: curY,  label: `${MESES_FAC[curM-1]} ${curY}`,  esCurr: true  },
+    { m: prevM, y: prevY, label: `${MESES_FAC[prevM-1]} ${prevY}`, esCurr: false },
+  ];
+  const alerts = [];
+
+  for (const { m, y, label, esCurr } of months) {
+    const mStart = new Date(y, m-1, 1), mEnd = new Date(y, m, 0);
+
+    // Facilidades
+    for (const [src, sheets] of Object.entries(p.fuentes||{})) {
+      if (!isSrcFac(src)) continue;
+      for (const recs of Object.values(sheets||{})) {
+        for (const rec of (recs||[])) {
+          const key = `FACILIDADES ADMINISTRATIVAS ${MESES_FAC[m-1]} ${y}`;
+          const val = rec[key];
+          if (val && String(val).trim() && String(val).trim() !== '.') {
+            const dias = expandFac(val);
+            if (dias.length)
+              alerts.push({ tipo:'FACILIDAD', label, esCurr, icon:'📅', color:'amber',
+                detalle:`${dias.length} día${dias.length>1?'s':''}: ${dias.slice(0,3).join(', ')}${dias.length>3?'…':''}` });
+          }
+        }
+      }
+    }
+
+    // LCGS
+    for (const [src, sheets] of Object.entries(p.fuentes||{})) {
+      if (!isSrcLCGS(src)) continue;
+      for (const recs of Object.values(sheets||{})) {
+        for (const rec of (recs||[])) {
+          const fi = parseDateDMY(String(rec['Fecha de Inicio']||''));
+          const ft = parseDateDMY(String(rec['Fecha de Termino']||rec['Fecha de Término']||''));
+          if (!fi) continue;
+          const end = ft||fi;
+          if (fi <= mEnd && end >= mStart)
+            alerts.push({ tipo:'LCGS', label, esCurr, icon:'📋', color:'teal',
+              detalle:`${String(rec['Fecha de Inicio']||'').trim()} – ${String(rec['Fecha de Termino']||rec['Fecha de Término']||'').trim()}` });
+        }
+      }
+    }
+
+    // Licencias médicas
+    for (const [src, sheets] of Object.entries(p.fuentes||{})) {
+      if (!isSrcLicMed(src)) continue;
+      for (const recs of Object.values(sheets||{})) {
+        for (const rec of (recs||[])) {
+          const d=String(rec['D']||'').trim(), m2=String(rec['M']||'').trim(), aR=String(rec['A']||'').trim();
+          if (!d||!m2||!aR) continue;
+          const yr = aR.length<=2 ? 2000+parseInt(aR,10) : parseInt(aR,10);
+          const start = new Date(yr, parseInt(m2,10)-1, parseInt(d,10));
+          if (isNaN(start.getTime())) continue;
+          const d2=String(rec['D_2']||d).trim(), m2b=String(rec['M_2']||m2).trim(), a2R=String(rec['A_2']||aR).trim();
+          const yr2 = a2R.length<=2 ? 2000+parseInt(a2R,10) : parseInt(a2R,10);
+          const end  = new Date(yr2, parseInt(m2b,10)-1, parseInt(d2,10));
+          if (start <= mEnd && end >= mStart) {
+            const diag = String(rec['Diagnostico']||'').trim();
+            alerts.push({ tipo:'LIC.MED.', label, esCurr, icon:'🏥', color:'navy',
+              detalle: diag ? diag.slice(0,50)+(diag.length>50?'…':'') : `${d}/${m2}/${yr} – ${d2}/${m2b}/${yr2}` });
+          }
+        }
+      }
+    }
+  }
+
+  // Deduplicar por tipo+label
+  const seen = new Set();
+  return alerts.filter(a => { const k=`${a.tipo}|${a.label}|${a.detalle}`; if(seen.has(k)) return false; seen.add(k); return true; });
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -304,7 +441,7 @@ function renderPerson(p) {
     <div class="av">${esc(getIni(p.nombre))}</div>
     <div class="pi">
       <div class="pi-rfc">RFC: ${esc(p.rfc)}${stats.tarjeta!=='—'?` · Tarjeta: <b>${esc(stats.tarjeta)}</b>`:''}</div>
-      <div class="pi-nom">${esc(p.nombre || '(Sin nombre registrado)')}</div>
+      <div class="pi-nom">${esc(fmtNombre(p.nombre) || '(Sin nombre registrado)')}</div>
       <div class="pi-chips">${Object.keys(p.fuentes).map(s => `<span class="chip" style="border-color:${srcColor(s)};color:${srcColor(s)}">${esc(srcDisplayName(s))}</span>`).join('')}</div>
       ${stats.servicio!=='—'?`<div style="margin-top:5px;font-size:11px;color:var(--tx2)"><b>${esc(stats.servicio)}</b>${stats.turno!=='—'?' · '+esc(stats.turno):''}</div>`:''}
     </div>
@@ -321,7 +458,38 @@ function renderPerson(p) {
     <div class="stat-pill stat-navy"><span class="stat-num">${stats.licCount}</span><span class="stat-lbl">Licencias</span>${stats.licDias>0?`<span class="stat-sub">${stats.licDias} días</span>`:''}</div>
     <div class="stat-pill stat-teal"><span class="stat-num">${stats.lcgsCount}</span><span class="stat-lbl">LCGS</span>${stats.lcgsDias>0?`<span class="stat-sub">${stats.lcgsDias} días</span>`:''}</div>
     <div class="stat-pill stat-amber"><span class="stat-num">${stats.facCount}</span><span class="stat-lbl">Facilidades 2026</span><span class="stat-sub">días individuales</span></div>
-  </div>`;
+  </div>
+  ${(() => {
+    const acts = getRecentActivity(p);
+    if (!acts.length) return '';
+    const currActs = acts.filter(a => a.esCurr);
+    const prevActs = acts.filter(a => !a.esCurr);
+    const mesActual = MESES_FAC[new Date().getMonth()];
+    const mesPrev   = MESES_FAC[new Date().getMonth()===0 ? 11 : new Date().getMonth()-1];
+    let html = `<div class="recent-activity-banner">
+      <div class="rab-title">⚡ Actividad reciente — informativo</div>
+      <div class="rab-cols">`;
+    if (currActs.length) {
+      html += `<div class="rab-group rab-curr">
+        <div class="rab-month-label">📍 Mes actual · ${mesActual}</div>
+        ${currActs.map(a=>`<div class="rab-item rab-${a.color}">
+          <span class="rab-tipo">${a.icon} ${esc(a.tipo)}</span>
+          <span class="rab-det">${esc(a.detalle)}</span>
+        </div>`).join('')}
+      </div>`;
+    }
+    if (prevActs.length) {
+      html += `<div class="rab-group rab-prev">
+        <div class="rab-month-label">🕐 Mes anterior · ${mesPrev}</div>
+        ${prevActs.map(a=>`<div class="rab-item rab-${a.color}">
+          <span class="rab-tipo">${a.icon} ${esc(a.tipo)}</span>
+          <span class="rab-det">${esc(a.detalle)}</span>
+        </div>`).join('')}
+      </div>`;
+    }
+    html += `</div></div>`;
+    return html;
+  })()}`;
 
   for (const [sname, sheets] of Object.entries(p.fuentes)) {
     const st = Object.values(sheets).reduce((a, rr) => a + rr.length, 0);
@@ -1185,7 +1353,7 @@ function renderAdvanzado() {
       <div class="adv-card-h"><h3>Detalle filtrado</h3><span>${total} filas</span></div>
       ${total ? `<div class="adv-table-wrap"><table><thead><tr><th>#</th><th>RFC</th><th>Nombre</th><th>Área</th><th>Turno</th><th>Entrada</th><th>Salida</th><th>Día</th><th>Mes</th><th>Año</th></tr></thead><tbody>`+
         rows.sort((a,b)=>a.nombre.localeCompare(b.nombre,'es')||a.anio.localeCompare(b.anio)||a.mesIndex-b.mesIndex||a.dia.localeCompare(b.dia,'es')).map((r,i)=>`
-          <tr><td class="rn">${i+1}</td><td class="mono acc">${esc(r.rfc)}</td><td>${esc(r.nombre)}</td><td>${esc(r.servicio)}</td><td>${esc(r.turno)}</td><td class="tc">${esc(r.entrada)}</td><td class="tc">${esc(r.salida)}</td><td class="dc">${esc(r.dia)}</td><td>${esc(r.mes)}</td><td class="mono">${esc(r.anio)}</td></tr>`).join('')+
+          <tr><td class="rn">${i+1}</td><td class="mono acc">${esc(r.rfc)}</td><td class="nom-cell" title="${esc(fmtNombre(r.nombre))}">${esc(fmtNombre(r.nombre))}</td><td>${esc(r.servicio)}</td><td>${esc(r.turno)}</td><td class="tc">${esc(r.entrada)}</td><td class="tc">${esc(r.salida)}</td><td class="dc">${esc(r.dia)}</td><td>${esc(r.mes)}</td><td class="mono">${esc(r.anio)}</td></tr>`).join('')+
         `</tbody></table></div>` : `<div class="empty-adv">No hay resultados con los filtros seleccionados.</div>`}
       <div class="adv-note">Conteo: <b>12/15/05/2026 = 2 facilidades</b> (días individuales) · <b>12-15/05/2026 = 1 facilidad</b> (rango). Para año completo deja el mes en "Todos".</div>
     </div>`;
@@ -1230,7 +1398,7 @@ function renderLicencias() {
     <div class="adv-card">
       <div class="adv-card-h"><h3>Detalle filtrado</h3><span>${total} registros</span></div>
       ${total ? `<div class="adv-table-wrap"><table><thead><tr><th>#</th><th>RFC</th><th>Nombre</th><th>Diagnóstico</th><th>Inicio</th><th>Término</th><th># Días</th><th>Turno</th><th>Año</th></tr></thead><tbody>`+
-        rows.map((r,i)=>`<tr><td class="rn">${i+1}</td><td class="mono acc">${esc(r.rfc)}</td><td>${esc(r.nombre)}</td><td style="max-width:220px;white-space:normal">${esc(r.diagnostico)}</td><td class="dc">${esc(r.inicio)}</td><td class="dc">${esc(r.termino)}</td><td class="nc">${esc(r.dias)}</td><td>${esc(r.turno)}</td><td class="mono">${esc(r.anio)}</td></tr>`).join('')+
+        rows.map((r,i)=>`<tr><td class="rn">${i+1}</td><td class="mono acc">${esc(r.rfc)}</td><td class="nom-cell" title="${esc(fmtNombre(r.nombre))}">${esc(fmtNombre(r.nombre))}</td><td style="max-width:220px;white-space:normal">${esc(r.diagnostico)}</td><td class="dc">${esc(r.inicio)}</td><td class="dc">${esc(r.termino)}</td><td class="nc">${esc(r.dias)}</td><td>${esc(r.turno)}</td><td class="mono">${esc(r.anio)}</td></tr>`).join('')+
         `</tbody></table></div>` : `<div class="empty-adv">No hay resultados con los filtros seleccionados.</div>`}
     </div>`;
 }
@@ -1269,7 +1437,7 @@ function renderLCGS() {
     <div class="adv-card">
       <div class="adv-card-h"><h3>Detalle filtrado</h3><span>${total} registros</span></div>
       ${total ? `<div class="adv-table-wrap"><table><thead><tr><th>#</th><th>RFC</th><th>Nombre</th><th>Consecutivo</th><th># Días</th><th>Inicio</th><th>Término</th><th>Turno</th><th>Año</th></tr></thead><tbody>`+
-        rows.map((r,i)=>`<tr><td class="rn">${i+1}</td><td class="mono acc">${esc(r.rfc)}</td><td>${esc(r.nombre)}</td><td class="nc">${esc(r.consec)}</td><td class="nc">${esc(r.dias)}</td><td class="dc">${esc(r.inicio)}</td><td class="dc">${esc(r.termino)}</td><td>${esc(r.turno)}</td><td class="mono">${esc(r.anio)}</td></tr>`).join('')+
+        rows.map((r,i)=>`<tr><td class="rn">${i+1}</td><td class="mono acc">${esc(r.rfc)}</td><td class="nom-cell" title="${esc(fmtNombre(r.nombre))}">${esc(fmtNombre(r.nombre))}</td><td class="nc">${esc(r.consec)}</td><td class="nc">${esc(r.dias)}</td><td class="dc">${esc(r.inicio)}</td><td class="dc">${esc(r.termino)}</td><td>${esc(r.turno)}</td><td class="mono">${esc(r.anio)}</td></tr>`).join('')+
         `</tbody></table></div>` : `<div class="empty-adv">No hay resultados con los filtros seleccionados.</div>`}
     </div>`;
 }
@@ -1508,9 +1676,10 @@ function parseDateDMY(s) {
 
 function isMayoDayInFacilidad(facValue, dayNum) {
   if (!facValue || !String(facValue).trim()) return false;
+  const mm = pad(_faltasMes), yr = String(_faltasAnio);
   for (const d of expandFac(facValue)) {
     const parts = d.split('/');
-    if (parts.length < 3 || parts[1] !== '05' || parts[2] !== '2026') continue;
+    if (parts.length < 3 || parts[1] !== mm || parts[2] !== yr) continue;
     const dp = parts[0];
     if (dp.includes('-')) {
       const [s, e] = dp.split('-').map(x => parseInt(x, 10));
@@ -1528,7 +1697,7 @@ function lcgsCoversMayoDay(rec, dayNum) {
   const start = parseDateDMY(fi);
   if (!start) return false;
   const end = parseDateDMY(ft) || start;
-  const target = new Date(2026, 4, dayNum);
+  const target = new Date(_faltasAnio, _faltasMes - 1, dayNum);
   return start <= target && target <= end;
 }
 
@@ -1545,7 +1714,7 @@ function licMedCoversMayoDay(rec, dayNum) {
   const start  = new Date(yr,  parseInt(m,  10) - 1, parseInt(d,  10));
   const end    = new Date(yr2, parseInt(m2, 10) - 1, parseInt(d2, 10));
   if (isNaN(start.getTime())) return false;
-  const target = new Date(2026, 4, dayNum);
+  const target = new Date(_faltasAnio, _faltasMes - 1, dayNum);
   return start <= target && target <= end;
 }
 
@@ -1612,9 +1781,9 @@ function checkCoberturaFalta(persona, diaNum) {
     for (const recs of Object.values(sheets || {})) {
       for (const rec of (recs || [])) {
         if (isSrcFac(src)) {
-          const facVal = rec['FACILIDADES ADMINISTRATIVAS MAYO 2026'];
+          const facVal = rec[`FACILIDADES ADMINISTRATIVAS ${MESES_FAC[_faltasMes-1]} ${_faltasAnio}`];
           if (facVal && isMayoDayInFacilidad(facVal, diaNum))
-            return { tipo: 'FACILIDAD', detalle: `Facilidad administrativa día ${diaNum}/05/2026` };
+            return { tipo: 'FACILIDAD', detalle: `Facilidad administrativa día ${diaNum}/${pad(_faltasMes)}/${_faltasAnio}` };
         } else if (isSrcLCGS(src)) {
           if (lcgsCoversMayoDay(rec, diaNum)) {
             const fi = String(rec['Fecha de Inicio'] || '').trim();
@@ -1654,6 +1823,54 @@ function getPersonaServicioTurno(persona) {
 
 function normNombreSimple(n) {
   return String(n || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+/* Convierte "AGUILAR,MARTINEZ/LUCIA" → "Lucia Aguilar Martinez" */
+function toTitleCase(s) {
+  const low = new Set(['de','del','la','las','los','y','e','mc','mac','ma']);
+  return String(s || '').toLowerCase().replace(/\b\w+/g, w => low.has(w) ? w : w.charAt(0).toUpperCase() + w.slice(1));
+}
+function fmtNombre(nombre) {
+  if (!nombre) return '';
+  const s = String(nombre).trim();
+  if (s.includes('/')) {
+    // Formato DB: APELLIDO1,APELLIDO2/NOMBRES
+    const slash = s.indexOf('/');
+    const apellidosPart = s.slice(0, slash).replace(/,/g, ' ').trim();
+    const nombresPart   = s.slice(slash + 1).trim();
+    return toTitleCase([nombresPart, apellidosPart].filter(Boolean).join(' '));
+  }
+  if (s.includes(',')) {
+    // Formato alternativo: APELLIDOS, NOMBRES
+    const [apellidos, nombres] = s.split(',', 2).map(p => p.trim());
+    return toTitleCase([nombres, apellidos].filter(Boolean).join(' '));
+  }
+  return toTitleCase(s);
+}
+
+/* Matching fuzzy para buscar nombres en la BD (vales) */
+function normNameForMatch(n) {
+  return String(n || '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ').trim();
+}
+function matchNombresScore(a, b) {
+  const tokA = normNameForMatch(a).split(' ').filter(Boolean);
+  const tokB = normNameForMatch(b).split(' ').filter(Boolean);
+  if (!tokA.length || !tokB.length) return 0;
+  let hits = 0;
+  for (const t of tokA) if (tokB.some(b2 => b2 === t || (t.length >= 4 && (b2.startsWith(t) || t.startsWith(b2))))) hits++;
+  return hits / Math.max(tokA.length, tokB.length);
+}
+function findPersonaByNombre(inputName) {
+  let best = null, bestScore = 0;
+  for (const [rfc, persona] of Object.entries(DB || {})) {
+    const s = matchNombresScore(inputName, persona.nombre || '');
+    if (s > bestScore) { bestScore = s; best = { rfc, persona, score: s }; }
+  }
+  return bestScore >= 0.55 ? best : null;
 }
 
 function analyzeFaltas(rows) {
@@ -1711,7 +1928,8 @@ function buildPersonasSinNada(faltasResults) {
   const tarjetasConFaltas = new Set(faltasResults.map(r => r.tarjeta));
   const sinNada = [];
   for (const [rfc, persona] of Object.entries(DB || {})) {
-    let tieneFacMayo = false, tieneLicMayo = false, tieneLcgsMayo = false, tarjeta = '—', servicio = '—', turno = '—';
+    let tieneFacMes = false, tieneLicMes = false, tieneLcgsMes = false, tarjeta = '—', servicio = '—', turno = '—';
+    const facKey = `FACILIDADES ADMINISTRATIVAS ${MESES_FAC[_faltasMes-1]} ${_faltasAnio}`;
     for (const [src, sheets] of Object.entries(persona.fuentes || {})) {
       for (const recs of Object.values(sheets || {})) {
         for (const rec of (recs || [])) {
@@ -1720,20 +1938,20 @@ function buildPersonasSinNada(faltasResults) {
             if (t && t !== '—') tarjeta = String(t).trim().replace(/^0+/, '') || '0';
             const sv = String(rec['SERVICIO'] || '').trim(); if (sv) servicio = sv;
             const tu = String(rec['TURNO'] || '').trim();   if (tu) turno = normTurno(tu);
-            const mayo = rec['FACILIDADES ADMINISTRATIVAS MAYO 2026'];
-            if (mayo && String(mayo).trim() && String(mayo).trim() !== '.' && expandFac(mayo).length)
-              tieneFacMayo = true;
+            const fv = rec[facKey];
+            if (fv && String(fv).trim() && String(fv).trim() !== '.' && expandFac(fv).length)
+              tieneFacMes = true;
           } else if (isSrcLCGS(src)) {
-            for (let d = 1; d <= 31 && !tieneLcgsMayo; d++)
-              if (lcgsCoversMayoDay(rec, d)) tieneLcgsMayo = true;
+            for (let d = 1; d <= 31 && !tieneLcgsMes; d++)
+              if (lcgsCoversMayoDay(rec, d)) tieneLcgsMes = true;
           } else if (isSrcLicMed(src)) {
-            for (let d = 1; d <= 31 && !tieneLicMayo; d++)
-              if (licMedCoversMayoDay(rec, d)) tieneLicMayo = true;
+            for (let d = 1; d <= 31 && !tieneLicMes; d++)
+              if (licMedCoversMayoDay(rec, d)) tieneLicMes = true;
           }
         }
       }
     }
-    if (!tieneFacMayo && !tieneLicMayo && !tieneLcgsMayo && !tarjetasConFaltas.has(tarjeta))
+    if (!tieneFacMes && !tieneLicMes && !tieneLcgsMes && !tarjetasConFaltas.has(tarjeta))
       sinNada.push({ rfc, nombre: persona.nombre || '—', tarjeta, servicio, turno });
   }
   _sinNadaCache = sinNada;
@@ -1751,12 +1969,13 @@ function openFaltasPanel() {
   document.getElementById('em').style.display = 'none';
   rp.classList.add('on');
 
+  const mesOpts = MESES_FAC.map((m,i) => `<option value="${i+1}"${i+1===_faltasMes?'selected':''}>${m}</option>`).join('');
   const backBtn = cur ? `<button class="btn sec" onclick="pick('${esc(cur)}')">← Volver a persona</button>` : '';
   rp.innerHTML = `<div class="faltas-wrap">
     <div class="adv-head">
       <div class="adv-title">
-        <h2>Análisis de Faltas — Mayo 2026</h2>
-        <p>Sube el Excel con la hoja <b>FALTAS MAYO</b>. El sistema cruzará cada falta con facilidades, LCGS y licencias médicas activas ese día.</p>
+        <h2 id="faltasPanelTitulo">Análisis de Faltas — ${MESES_FAC[_faltasMes-1]} ${_faltasAnio}</h2>
+        <p>Sube el Excel de faltas. El sistema detecta el mes de la hoja y cruza con facilidades, LCGS y licencias médicas activas ese día.</p>
       </div>
       <div class="adv-actions">
         ${backBtn}
@@ -1764,10 +1983,15 @@ function openFaltasPanel() {
         <input type="file" id="faltasFile" accept=".xlsx" style="display:none" onchange="handleFaltasFile(this)">
       </div>
     </div>
+    <div style="display:flex;gap:10px;align-items:center;padding:10px 0 4px;flex-wrap:wrap">
+      <label style="font-size:11px;color:var(--tx2);font-family:'IBM Plex Mono',monospace">Mes de análisis:</label>
+      <select id="faltasMesSel" style="font-size:11px;padding:5px 8px;border:1px solid var(--brd);border-radius:7px;background:var(--sur)" onchange="_faltasMes=parseInt(this.value);_sinNadaCache=null;document.getElementById('faltasPanelTitulo').textContent='Análisis de Faltas — '+MESES_FAC[_faltasMes-1]+' '+_faltasAnio">${mesOpts}</select>
+      <input type="number" id="faltasAnioInput" value="${_faltasAnio}" min="2020" max="2035" style="width:72px;font-size:11px;padding:5px 8px;border:1px solid var(--brd);border-radius:7px;background:var(--sur)" onchange="_faltasAnio=parseInt(this.value)||${_faltasAnio};_sinNadaCache=null;document.getElementById('faltasPanelTitulo').textContent='Análisis de Faltas — '+MESES_FAC[_faltasMes-1]+' '+_faltasAnio">
+    </div>
     <div id="faltasDropzone" class="faltas-drop" onclick="document.getElementById('faltasFile').click()">
       <div class="faltas-drop-ico">📋</div>
       <div class="faltas-drop-txt">Haz clic o arrastra aquí el archivo Excel</div>
-      <div class="faltas-drop-sub">Debe contener la hoja "FALTAS MAYO"</div>
+      <div class="faltas-drop-sub">El mes se detecta automáticamente del nombre de la hoja</div>
     </div>
     <div id="faltasResult"></div>
   </div>`;
@@ -1798,11 +2022,22 @@ async function processFaltasFile(file) {
   try {
     const data = await file.arrayBuffer();
     const wb   = XLSX.read(data, { type: 'array' });
-    if (!wb.Sheets['FALTAS MAYO']) {
-      res.innerHTML = `<div class="empty-adv" style="color:#e05252">No se encontró la hoja "FALTAS MAYO" en el archivo.</div>`;
+    const sheetName = wb.SheetNames.find(n => n.toUpperCase().includes('FALT')) || null;
+    if (!sheetName) {
+      res.innerHTML = `<div class="empty-adv" style="color:#e05252">No se encontró ninguna hoja de faltas en el archivo. Asegúrate de que el nombre de la hoja contenga "FALT" (ej: FALTAS MAYO, FALTAS JUNIO).</div>`;
       return;
     }
-    const rows = XLSX.utils.sheet_to_json(wb.Sheets['FALTAS MAYO'], { header: 1, defval: null });
+    // Auto-detectar mes del nombre de la hoja
+    const mesDetectado = MESES_FAC.findIndex(m => sheetName.toUpperCase().includes(m));
+    if (mesDetectado >= 0) {
+      _faltasMes = mesDetectado + 1;
+      _sinNadaCache = null;
+      const selM = document.getElementById('faltasMesSel');
+      if (selM) selM.value = String(_faltasMes);
+      const tit = document.getElementById('faltasPanelTitulo');
+      if (tit) tit.textContent = `Análisis de Faltas — ${MESES_FAC[_faltasMes-1]} ${_faltasAnio}`;
+    }
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, defval: null });
     const analysis = analyzeFaltas(rows);
     _faltasAnalysis = { ...analysis, rows, fileName: file.name };
     renderFaltasResultado(analysis);
@@ -1851,7 +2086,7 @@ function renderFaltasResultado(analysis) {
           ${results.slice().sort((a,b)=>b.diasOriginales.length-a.diasOriginales.length).map(r=>`
             <tr>
               <td class="mono acc">${esc(r.tarjeta)}</td>
-              <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.nombreDB)}</td>
+              <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(fmtNombre(r.nombreDB))}</td>
               <td class="nc">${r.diasOriginales.length}</td>
               <td style="color:var(--acc2);font-family:'IBM Plex Mono',monospace;font-size:10px">${r.diasJustificados.length}</td>
               <td class="nc" style="color:${r.diasNoJustificados.length?'var(--amber)':'var(--acc2)'}">${r.diasNoJustificados.length}</td>
@@ -1961,7 +2196,7 @@ function renderFaltasTablas(analysis, sinNada) {
     ${justRows.length ? `<table><thead><tr><th>Tarjeta</th><th>RFC</th><th>Nombre (BD)</th><th>Servicio</th><th>Turno</th><th>Día</th><th>Tipo</th><th>Cobertura</th></tr></thead><tbody>` +
       justRows.map(r => `<tr>
         <td class="mono acc">${esc(r.tarjeta)}</td><td class="mono" style="font-size:9px">${esc(r.rfc)}</td><td>${showNombre(r)}</td><td>${esc(r.servicio)}</td><td>${esc(r.turno)}</td>
-        <td class="nc" style="white-space:nowrap">${r.dia}/05/2026</td>
+        <td class="nc" style="white-space:nowrap">${r.dia}/${pad(_faltasMes)}/${_faltasAnio}</td>
         <td><span class="tipo-badge tipo-${r.tipo.replace('.','').toLowerCase().split('.')[0]}">${esc(r.tipo)}</span></td>
         <td style="font-size:10px;color:var(--tx2);min-width:160px">${esc(r.detalle)}</td>
       </tr>`).join('') + '</tbody></table>'
@@ -1983,7 +2218,7 @@ function renderFaltasTablas(analysis, sinNada) {
 
   // Personas sin nada
   h += `<div class="adv-card">
-    <div class="adv-card-h"><h3>Personas sin faltas, sin facilidades ni licencias en Mayo 2026</h3><span>${filtSinNada.length} personas</span></div>
+    <div class="adv-card-h"><h3>Personas sin faltas, facilidades ni licencias en ${MESES_FAC[_faltasMes-1]} ${_faltasAnio}</h3><span>${filtSinNada.length} personas</span></div>
     <div class="adv-table-wrap">
     ${filtSinNada.length ? `<table><thead><tr><th>Tarjeta</th><th>RFC</th><th>Nombre</th><th>Servicio</th><th>Turno</th></tr></thead><tbody>` +
       filtSinNada.map(r => `<tr>
@@ -2028,7 +2263,7 @@ function downloadCorregidas() {
   const ws = XLSX.utils.aoa_to_sheet(outRows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'FALTAS MAYO');
-  XLSX.writeFile(wb, `FALTAS_CORREGIDAS_MAYO_2026.xlsx`);
+  XLSX.writeFile(wb, `FALTAS_CORREGIDAS_${MESES_FAC[_faltasMes-1]}_${_faltasAnio}.xlsx`);
   showToast('Faltas corregidas descargadas');
 }
 
@@ -2041,14 +2276,14 @@ function downloadReporteJustificaciones() {
   const data = [head];
   filtered.forEach(r => {
     r.justificaciones.forEach(j =>
-      data.push([r.tarjeta, r.rfc, r.nombreDB, r.servicio, r.turno, `${j.dia}/05/2026`, j.tipo, j.detalle]));
+      data.push([r.tarjeta, r.rfc, r.nombreDB, r.servicio, r.turno, `${j.dia}/${pad(_faltasMes)}/${_faltasAnio}`, j.tipo, j.detalle]));
     if (!r.justificaciones.length)
       data.push([r.tarjeta, r.rfc, r.nombreDB, r.servicio, r.turno, '—', 'SIN COBERTURA', `Días sin justificar: ${r.diasNoJustificados.join(', ')}`]);
   });
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(data), 'Justificaciones');
-  XLSX.writeFile(wb, `REPORTE_JUSTIFICACIONES_MAYO_2026.xlsx`);
+  XLSX.writeFile(wb, `REPORTE_JUSTIFICACIONES_${MESES_FAC[_faltasMes-1]}_${_faltasAnio}.xlsx`);
   showToast(`Reporte justificaciones · ${data.length - 1} filas`);
 }
 
@@ -2064,7 +2299,7 @@ function downloadReporteSinNada() {
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(data), 'Sin cobertura Mayo');
-  XLSX.writeFile(wb, `REPORTE_SIN_COBERTURA_MAYO_2026.xlsx`);
+  XLSX.writeFile(wb, `REPORTE_SIN_COBERTURA_${MESES_FAC[_faltasMes-1]}_${_faltasAnio}.xlsx`);
   showToast(`Reporte sin cobertura · ${filtered.length} personas`);
 }
 
@@ -2088,7 +2323,8 @@ function genPDFFaltas() {
   const pct        = totalFalt ? (totalJust/totalFalt*100).toFixed(0) : 0;
 
   /* PÁG 1: RESUMEN */
-  PDF.header(doc,'Análisis de Faltas · Mayo 2026',`Hospital de la Mujer${filtroServ?' · Servicio: '+filtroServ:''}`,generated);
+  const _fMesNom = MESES_FAC[_faltasMes-1];
+  PDF.header(doc,`Análisis de Faltas · ${_fMesNom} ${_faltasAnio}`,`Hospital de la Mujer${filtroServ?' · Servicio: '+filtroServ:''}`,generated);
   PDF.kpi(doc, 14, 40, 56,'PERSONAS',     String(filtered.length),  'Con faltas',     PDF.navy);
   PDF.kpi(doc, 74, 40, 56,'FALTAS ORIG.', String(totalFalt),        'Días',           PDF.slate);
   PDF.kpi(doc,134, 40, 56,'JUSTIFICADAS', `${totalJust} (${pct}%)`, 'Con cobertura',  PDF.teal);
@@ -2100,14 +2336,14 @@ function genPDFFaltas() {
     filtered.slice().sort((a,b)=>b.diasOriginales.length-a.diasOriginales.length).map(r=>[
       r.tarjeta, r.nombreDB, r.servicio, r.turno,
       r.diasOriginales.length, r.diasJustificados.length, r.diasNoJustificados.length
-    ]),{generated,pageTitle:'Análisis de Faltas · Mayo 2026',pageSub:'Resumen por persona',fontSize:6.8,headColor:PDF.navy,
+    ]),{generated,pageTitle:`Análisis de Faltas · ${_fMesNom} ${_faltasAnio}`,pageSub:'Resumen por persona',fontSize:6.8,headColor:PDF.navy,
       columnStyles:{0:{cellWidth:18,halign:'center'},1:{cellWidth:62},2:{cellWidth:58},3:{cellWidth:28},4:{cellWidth:14,halign:'center'},5:{cellWidth:14,halign:'center'},6:{cellWidth:14,halign:'center'}}});
 
   /* PÁG 2: JUSTIFICACIONES */
   doc.addPage('landscape');
-  PDF.header(doc,'Faltas justificadas','Días con cobertura activa en Mayo 2026',generated);
+  PDF.header(doc,'Faltas justificadas',`Días con cobertura activa en ${_fMesNom} ${_faltasAnio}`,generated);
   const justRows=[];
-  filtered.forEach(r=>r.justificaciones.forEach(j=>justRows.push([r.tarjeta,r.nombreDB,r.servicio,r.turno,`${j.dia}/05/2026`,j.tipo,j.detalle])));
+  filtered.forEach(r=>r.justificaciones.forEach(j=>justRows.push([r.tarjeta,r.nombreDB,r.servicio,r.turno,`${j.dia}/${pad(_faltasMes)}/${_faltasAnio}`,j.tipo,j.detalle])));
   if(justRows.length){
     PDF.table(doc,42,['Tarjeta','Nombre','Servicio','Turno','Día','Tipo','Cobertura detectada'],justRows,
       {generated,pageTitle:'Faltas justificadas',pageSub:'Continuación',fontSize:6,cellPadding:1.8,headColor:PDF.teal,
@@ -2129,7 +2365,7 @@ function genPDFFaltas() {
   /* PÁG 4: SIN NADA */
   if(filtSinNada.length){
     doc.addPage('landscape');
-    PDF.header(doc,'Personas sin cobertura en Mayo 2026','Sin faltas, facilidades, LCGS ni licencias activas',generated);
+    PDF.header(doc,`Personas sin cobertura en ${_fMesNom} ${_faltasAnio}`,'Sin faltas, facilidades, LCGS ni licencias activas',generated);
     PDF.table(doc,42,['Tarjeta','RFC','Nombre','Servicio','Turno'],
       filtSinNada.map(r=>[r.tarjeta,r.rfc,r.nombre,r.servicio,r.turno]),
       {generated,pageTitle:'Sin cobertura Mayo',pageSub:'Continuación',fontSize:6.8,headColor:PDF.slate,
@@ -2137,7 +2373,7 @@ function genPDFFaltas() {
   }
 
   PDF.footer(doc,generated);
-  doc.save(`ANALISIS_FALTAS_MAYO_2026${filtroServ?'_'+PDF.safeName(filtroServ):''}.pdf`);
+  doc.save(`ANALISIS_FALTAS_${_fMesNom}_${_faltasAnio}${filtroServ?'_'+PDF.safeName(filtroServ):''}.pdf`);
   showToast('PDF análisis de faltas descargado');
 }
 
@@ -2435,6 +2671,14 @@ function openValesPanel() {
           <button class="btn sec" onclick="document.getElementById('valesFaltasFile').click()">📂 Subir FALTAS</button>
           <input type="file" id="valesFaltasFile" accept=".xlsx" style="display:none" onchange="handleValesFaltasUpload(this)">
         </div>
+        <div class="vconf-field">
+          <label>Lista de nombres <span class="vconf-opt">(opcional · filtra por lista del área)</span><br><span id="vNombresSt" class="vconf-st">— no cargada</span></label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="btn sec" onclick="document.getElementById('valesNombresFile').click()">📋 Subir lista de nombres</button>
+            <button class="btn sec" style="color:var(--tx3)" onclick="_valesNombresFilter=null;_valesNombresNoMatch=[];document.getElementById('vNombresSt').textContent='— no cargada';document.getElementById('vNombresSt').style.color='';if(_valesResults)renderValesResultados()">✕ Quitar filtro</button>
+          </div>
+          <input type="file" id="valesNombresFile" accept=".xlsx" style="display:none" onchange="handleValesNombresUpload(this)">
+        </div>
         <div class="vconf-field vconf-run">
           <button class="btn" id="vRunBtn" onclick="runValesAnalysis()">▶ Calcular elegibilidad</button>
           <div style="font-size:9px;color:var(--tx3);margin-top:4px">La base viene de los 3 Excel (data.json)</div>
@@ -2546,6 +2790,7 @@ function renderValesResultados() {
         <button class="btn sec" onclick="clearValesFiltros()">↺ Limpiar filtros</button>
         <button class="btn sec" onclick="downloadValesElegibles()">⬇ Excel elegibles</button>
         <button class="btn sec" onclick="downloadValesCompleto()">⬇ Excel completo</button>
+        <button class="btn" onclick="downloadValesPDFEncargado()">🖨 PDF para encargado</button>
       </div>
     </div>
 
@@ -2590,6 +2835,7 @@ function applyValesFiltros(R) {
   const motF   = document.getElementById('vMotivo')?.value||'';
   const valeF  = document.getElementById('vUltVale')?.value||'';
   return R.filter(p => {
+    if (_valesNombresFilter && !_valesNombresFilter.has(p.tarjetaKey)) return false;
     if (catF && p.categoria!==catF) return false;
     if (turF && p.turno!==turF)     return false;
     if (serF && p.servicio!==serF)  return false;
@@ -2597,7 +2843,7 @@ function applyValesFiltros(R) {
     if (motF && !p.motivos.some(m=>m.tipo===motF)) return false;
     if (valeF==='sin' && p.lastVale)  return false;
     if (valeF==='con' && !p.lastVale) return false;
-    if (q && !(p.tarjeta.includes(q)||p.rfc.toUpperCase().includes(q)||p.rfcDB.toUpperCase().includes(q)||p.nombre.toUpperCase().includes(q))) return false;
+    if (q && !(p.tarjeta.includes(q)||p.rfc.toUpperCase().includes(q)||p.rfcDB.toUpperCase().includes(q)||p.nombre.toUpperCase().includes(q)||fmtNombre(p.nombre).toUpperCase().includes(q))) return false;
     return true;
   });
 }
@@ -2657,7 +2903,7 @@ function renderValesTabla(R) {
           <td>${ESTADO_HTML[p.estado]||''}</td>
           <td class="mono acc">${esc(p.tarjeta)}</td>
           <td class="mono" style="font-size:9px">${esc(p.rfcDB)}</td>
-          <td class="vnom" title="${esc(p.nombre)}">${esc(p.nombre)}</td>
+          <td class="vnom" title="${esc(fmtNombre(p.nombre))}">${esc(fmtNombre(p.nombre))}</td>
           <td style="font-size:10px">${esc(p.categoria)}</td>
           <td style="font-size:10px">${esc(p.turno)}</td>
           <td style="font-size:10px">${esc(p.servicio)}</td>
@@ -2727,7 +2973,7 @@ function selectValesPerson(tarjetaKey) {
     <button class="vdet-close" onclick="closeValesDetalle()">✕</button>
     <div class="av" style="width:42px;height:42px;font-size:14px;border-radius:10px;flex-shrink:0">${esc(getIni(persona.nombre))}</div>
     <div style="flex:1;min-width:0">
-      <div class="pi-nom" style="font-size:16px">${esc(persona.nombre)}</div>
+      <div class="pi-nom" style="font-size:16px">${esc(fmtNombre(persona.nombre))}</div>
       <div style="font-size:11px;color:var(--tx2)">Tarjeta: <b>${esc(persona.tarjeta)}</b> · RFC: <b>${esc(persona.rfcDB)}</b></div>
       <div style="font-size:11px;color:var(--tx2)">${esc(persona.categoria)} · ${esc(persona.turno)}${persona.servicio&&persona.servicio!=='—'?' · '+esc(persona.servicio):''}</div>
     </div>
@@ -2773,5 +3019,115 @@ function downloadValesCompleto() {
   XLSX.writeFile(wb,`VALES_COMPLETO_${Object.keys(MES_NUM).find(k=>MES_NUM[k]===_valesEvalM)}_${_valesEvalY}.xlsx`);
   showToast(`Excel completo · ${filt.length} personas`);
 }
+/* ═══════════════════════════════════════════════════════════
+   VALES — UPLOAD LISTA DE NOMBRES + REPORTE ENCARGADO
+═══════════════════════════════════════════════════════════ */
+async function handleValesNombresUpload(input) {
+  const f = input.files[0]; if (!f) return; input.value = '';
+  const st = document.getElementById('vNombresSt');
+  if (st) { st.textContent = '⏳ procesando…'; st.style.color = ''; }
+  try {
+    const data = await f.arrayBuffer();
+    const wb   = XLSX.read(data, { type: 'array' });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const rows  = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
+
+    // Detectar la columna con nombres: la que tenga más texto largo
+    // Probar las primeras 3 columnas, quitar filas de encabezado (texto similar a NOMBRE/TRABAJADOR)
+    const nombresRaw = [];
+    for (const row of rows) {
+      if (!row) continue;
+      // Buscar en las primeras 5 columnas el primer valor que parezca un nombre
+      for (let c = 0; c < Math.min(5, row.length); c++) {
+        const val = String(row[c] ?? '').trim();
+        if (!val || val.length < 4) continue;
+        // Descartar encabezados comunes
+        const u = val.toUpperCase();
+        if (['NOMBRE','TRABAJADOR','EMPLEADO','PERSONAL','RFC','TARJETA','NO','NUM','#'].some(h => u.includes(h) && val.length < 20)) break;
+        if (/[A-ZÁÉÍÓÚÑ]{3,}/.test(val)) { nombresRaw.push(val); break; }
+      }
+    }
+
+    // Hacer matching fuzzy
+    const matched = [], notFound = [];
+    const tarjetasUsadas = new Set();
+    for (const nombre of nombresRaw) {
+      const hit = findPersonaByNombre(nombre);
+      if (hit) {
+        // Buscar tarjeta del match
+        const tarjetaKey = (() => {
+          for (const sheets of Object.values(hit.persona.fuentes || {}))
+            for (const recs of Object.values(sheets || {}))
+              for (const rec of (recs || [])) {
+                const t = guessTarjeta(rec);
+                if (t && t !== '—') return String(t).trim().replace(/^0+/, '') || '0';
+              }
+          return hit.rfc;
+        })();
+        if (!tarjetasUsadas.has(tarjetaKey)) {
+          tarjetasUsadas.add(tarjetaKey);
+          matched.push({ nombre, tarjetaKey, rfc: hit.rfc, nombreDB: hit.persona.nombre, score: hit.score });
+        }
+      } else {
+        notFound.push(nombre);
+      }
+    }
+
+    _valesNombresFilter  = tarjetasUsadas;
+    _valesNombresNoMatch = notFound;
+
+    const msg = `✓ ${matched.length} encontrados de ${nombresRaw.length}${notFound.length ? ` · ${notFound.length} sin match` : ''}`;
+    if (st) { st.textContent = msg; st.style.color = 'var(--acc2)'; }
+    showToast(`Lista de nombres: ${msg}`);
+
+    // Si ya hay resultados calculados, re-renderizar con el filtro
+    if (_valesResults) renderValesResultados();
+  } catch(e) {
+    if (st) { st.textContent = `✗ ${e.message}`; st.style.color = '#e05252'; }
+    console.error(e);
+  }
+}
+
+/* ─── PDF reporte para encargado de área ─── */
+function downloadValesPDFEncargado() {
+  if (!_valesResults || !window.jspdf?.jsPDF) { showToast('Calcula elegibilidad primero', 'err'); return; }
+  const { jsPDF }   = window.jspdf;
+  const doc         = new jsPDF('portrait', 'mm', 'a4');
+  const generated   = new Date().toLocaleString('es-MX');
+  const mesNom      = Object.keys(MES_NUM).find(k => MES_NUM[k] === _valesEvalM) || '';
+  const filtBase    = applyValesFiltros(_valesResults);
+  const elegibles   = filtBase.filter(p => p.elegible);
+  const noElegibles = filtBase.filter(p => !p.elegible);
+
+  PDF.header(doc, `Reporte de Vales · ${mesNom} ${_valesEvalY}`, 'Hospital de la Mujer · Para el encargado de área', generated);
+
+  let y = 38;
+  PDF.kpi(doc, 14,  y, 54, 'ELEGIBLES',    String(elegibles.length),   `${mesNom} ${_valesEvalY}`, PDF.teal);
+  PDF.kpi(doc, 72,  y, 54, 'NO ELEGIBLES', String(noElegibles.length), 'Con incidencias',           PDF.amber);
+  PDF.kpi(doc, 130, y, 54, 'EVALUADOS',    String(filtBase.length),    'Total en lista',             PDF.navy);
+  y += 34;
+
+  if (elegibles.length) {
+    y = PDF.section(doc, `✓ Elegibles para vale — ${mesNom} ${_valesEvalY}`, y, PDF.teal);
+    y = PDF.table(doc, y,
+      ['#', 'Tarjeta', 'Nombre', 'Categoría', 'Turno', 'Área', 'Último vale'],
+      elegibles.map((p, i) => [i+1, p.tarjeta, fmtNombre(p.nombre), p.categoria, p.turno, p.servicio, p.lastVale?.label || 'Sin vale']),
+      { generated, pageTitle: `Vales · ${mesNom} ${_valesEvalY}`, pageSub: 'Elegibles', headColor: PDF.teal,
+        columnStyles: { 0:{cellWidth:8,halign:'center'}, 1:{cellWidth:18,halign:'center'}, 2:{cellWidth:52}, 3:{cellWidth:26}, 4:{cellWidth:22}, 5:{cellWidth:42}, 6:{cellWidth:22,halign:'center'} } });
+  }
+  if (noElegibles.length) {
+    y = PDF.ensure(doc, y, 30, generated, `Vales · ${mesNom} ${_valesEvalY}`, 'No elegibles');
+    y = PDF.section(doc, '✗ No elegibles — motivo de exclusión', y, PDF.amber);
+    y = PDF.table(doc, y,
+      ['#', 'Tarjeta', 'Nombre', 'Motivo'],
+      noElegibles.map((p, i) => [i+1, p.tarjeta, fmtNombre(p.nombre), p.motivos.map(m => m.desc).join(' | ')]),
+      { generated, pageTitle: `Vales · ${mesNom} ${_valesEvalY}`, pageSub: 'No elegibles', headColor: PDF.amber,
+        columnStyles: { 0:{cellWidth:8,halign:'center'}, 1:{cellWidth:18,halign:'center'}, 2:{cellWidth:52}, 3:{cellWidth:112} } });
+  }
+  PDF.footer(doc, generated);
+  doc.save(`VALES_ENCARGADO_${mesNom}_${_valesEvalY}.pdf`);
+  showToast(`PDF encargado descargado · ${elegibles.length} elegibles`);
+}
+
 /* ── INICIO ── */
 loadData();
