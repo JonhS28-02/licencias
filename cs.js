@@ -146,7 +146,7 @@ async function loadData() {
     }
     setupSearch();
   } catch(e) {
-    document.getElementById('ld').innerHTML = `<span style="color:#e05252;font-size:12px">Error: ${e.message}</span>`;
+    document.getElementById('ld').innerHTML = `<span style="color:#e05252;font-size:14px">Error: ${e.message}</span>`;
     console.error(e);
   }
 }
@@ -191,7 +191,7 @@ function setupSearch() {
     // Pie con total de resultados
     const total = searchDB(q, 9999).length;
     if (total > res.length) {
-      ac.innerHTML += `<div style="padding:6px 13px;font-size:9px;color:var(--tx3);font-family:'IBM Plex Mono',monospace;border-top:1px solid var(--brd);text-align:center">+${total - res.length} más — escribe más para filtrar</div>`;
+      ac.innerHTML += `<div style="padding:6px 13px;font-size:12px;color:var(--tx3);font-family:'IBM Plex Mono',monospace;border-top:1px solid var(--brd);text-align:center">+${total - res.length} más — escribe más para filtrar</div>`;
     }
     ac.style.display = 'block';
   });
@@ -443,7 +443,7 @@ function renderPerson(p) {
       <div class="pi-rfc">RFC: ${esc(p.rfc)}${stats.tarjeta!=='—'?` · Tarjeta: <b>${esc(stats.tarjeta)}</b>`:''}</div>
       <div class="pi-nom">${esc(fmtNombre(p.nombre) || '(Sin nombre registrado)')}</div>
       <div class="pi-chips">${Object.keys(p.fuentes).map(s => `<span class="chip" style="border-color:${srcColor(s)};color:${srcColor(s)}">${esc(srcDisplayName(s))}</span>`).join('')}</div>
-      ${stats.servicio!=='—'?`<div style="margin-top:5px;font-size:11px;color:var(--tx2)"><b>${esc(stats.servicio)}</b>${stats.turno!=='—'?' · '+esc(stats.turno):''}</div>`:''}
+      ${stats.servicio!=='—'?`<div style="margin-top:5px;font-size:14px;color:var(--tx2)"><b>${esc(stats.servicio)}</b>${stats.turno!=='—'?' · '+esc(stats.turno):''}</div>`:''}
     </div>
     <div class="tot">
       <div class="tot-n">${totalR}</div>
@@ -512,7 +512,7 @@ function renderPerson(p) {
       if (isFac) {
         const infoKeys = ['TARJETA','TURNO','ENTRADA','SALIDA','SERVICIO'];
         recs.forEach((rec, ri) => {
-          if (recs.length > 1) h += `<div style="padding:4px 12px;font-size:9px;color:var(--tx3);font-family:'IBM Plex Mono',monospace;background:var(--soft);border:1px solid var(--brd);border-bottom:none;border-top:${ri>0?'1px solid var(--brd)':'none'}">REGISTRO ${ri + 1}</div>`;
+          if (recs.length > 1) h += `<div style="padding:4px 12px;font-size:12px;color:var(--tx3);font-family:'IBM Plex Mono',monospace;background:var(--soft);border:1px solid var(--brd);border-bottom:none;border-top:${ri>0?'1px solid var(--brd)':'none'}">REGISTRO ${ri + 1}</div>`;
           const infoFields = infoKeys.filter(k => rec[k] !== undefined && rec[k] !== null && rec[k] !== '');
           if (infoFields.length) {
             h += `<div class="fac-info">`;
@@ -1135,7 +1135,7 @@ function fillSelect(id, values, labelAll = 'Todos') {
 const CHART_COLORS = ['#1f5f8b','#2f6f63','#a06f20','#7a8694','#3a7ab5','#3a8f7c','#c8901a','#5a6874'];
 
 function svgDonut(data, total, size=120) {
-  if (!data || !data.length || !total) return '<div style="color:var(--tx3);font-size:11px;padding:16px">Sin datos</div>';
+  if (!data || !data.length || !total) return '<div style="color:var(--tx3);font-size:14px;padding:16px">Sin datos</div>';
   const r=46, cx=size/2, cy=size/2, stroke=18;
   let angle = -Math.PI/2, paths='', legend='';
   data.slice(0,8).forEach(([name,val],i) => {
@@ -1873,17 +1873,51 @@ function findPersonaByNombre(inputName) {
   return bestScore >= 0.55 ? best : null;
 }
 
-function analyzeFaltas(rows) {
+/* Busca, dentro de las primeras filas de una hoja, el renglón de encabezados
+   que trae TARJETA / NOMBRE / FALTAS (igual que hace el script de Python con
+   los LISTADO_<controlador>.xlsx reales — el encabezado no siempre está en
+   una fila fija, hay varias filas de título/membrete antes). Devuelve
+   {headerRowIdx, col:{tarjeta,nombre,faltas}} o null si no la encuentra. */
+function findFaltasHeaderInSheet(rows) {
+  const need = ['TARJETA', 'NOMBRE', 'FALTAS'];
+  const limit = Math.min(rows.length, 25);
+  for (let i = 0; i < limit; i++) {
+    const row = rows[i];
+    if (!row) continue;
+    const col = {};
+    row.forEach((cell, idx) => {
+      const s = String(cell ?? '').trim().toUpperCase();
+      if (s && col[s] == null) col[s] = idx;
+    });
+    if (need.every(k => col[k] != null)) {
+      return { headerRowIdx: i, col: { tarjeta: col['TARJETA'], nombre: col['NOMBRE'], faltas: col['FALTAS'] } };
+    }
+  }
+  return null;
+}
+
+/* Detecta mes/año a partir del texto del archivo (ej. "QNA: 2NDA. JULIO 2026"),
+   en vez de depender del nombre de la hoja (los listados reales usan el
+   nombre del controlador, ej. "MIGUEL", no llevan el mes en el título). */
+function detectMesAnioFromRows(rows) {
+  const text = rows.slice(0, 12).map(r => (r || []).map(c => String(c ?? '')).join(' ')).join(' ').toUpperCase();
+  // \b para no confundir "MAYO" con "RETARDO MAYOR", "MARZO" con otra palabra, etc.
+  const mesIdx = MESES_FAC.findIndex(m => new RegExp(`\\b${m}\\b`).test(text));
+  const yearMatch = text.match(/\b(20\d{2})\b/);
+  return { mes: mesIdx >= 0 ? mesIdx + 1 : null, anio: yearMatch ? parseInt(yearMatch[1], 10) : null };
+}
+
+function analyzeFaltas(rows, header) {
   const tarjetaMap = buildTarjetaMap();
   const results    = [];
   const notFound   = [];
-  // rows[0] = day-number headers, rows[1] = column headers, rows[2+] = data
-  const dataRows   = rows.slice(2).filter(r => r && r[1] != null && String(r[1]).trim());
+  const { tarjeta: cT, nombre: cN, faltas: cF } = header.col;
+  const dataRows   = rows.slice(header.headerRowIdx + 1).filter(r => r && r[cT] != null && String(r[cT]).trim());
 
   for (const row of dataRows) {
-    const tarjetaRaw = String(row[1] ?? '').trim();
-    const nombreRaw  = String(row[2] ?? '').trim();
-    const faltasRaw  = row[3];
+    const tarjetaRaw = String(row[cT] ?? '').trim();
+    const nombreRaw  = String(row[cN] ?? '').trim();
+    const faltasRaw  = row[cF];
     const diasOrig   = parseFaltasDias(faltasRaw);
     if (!diasOrig.length) continue;
 
@@ -1984,14 +2018,14 @@ function openFaltasPanel() {
       </div>
     </div>
     <div style="display:flex;gap:10px;align-items:center;padding:10px 0 4px;flex-wrap:wrap">
-      <label style="font-size:11px;color:var(--tx2);font-family:'IBM Plex Mono',monospace">Mes de análisis:</label>
-      <select id="faltasMesSel" style="font-size:11px;padding:5px 8px;border:1px solid var(--brd);border-radius:7px;background:var(--sur)" onchange="_faltasMes=parseInt(this.value);_sinNadaCache=null;document.getElementById('faltasPanelTitulo').textContent='Análisis de Faltas — '+MESES_FAC[_faltasMes-1]+' '+_faltasAnio">${mesOpts}</select>
-      <input type="number" id="faltasAnioInput" value="${_faltasAnio}" min="2020" max="2035" style="width:72px;font-size:11px;padding:5px 8px;border:1px solid var(--brd);border-radius:7px;background:var(--sur)" onchange="_faltasAnio=parseInt(this.value)||${_faltasAnio};_sinNadaCache=null;document.getElementById('faltasPanelTitulo').textContent='Análisis de Faltas — '+MESES_FAC[_faltasMes-1]+' '+_faltasAnio">
+      <label style="font-size:14px;color:var(--tx2);font-family:'IBM Plex Mono',monospace">Mes de análisis:</label>
+      <select id="faltasMesSel" style="font-size:14px;padding:5px 8px;border:1px solid var(--brd);border-radius:7px;background:var(--sur)" onchange="_faltasMes=parseInt(this.value);_sinNadaCache=null;document.getElementById('faltasPanelTitulo').textContent='Análisis de Faltas — '+MESES_FAC[_faltasMes-1]+' '+_faltasAnio">${mesOpts}</select>
+      <input type="number" id="faltasAnioInput" value="${_faltasAnio}" min="2020" max="2035" style="width:72px;font-size:14px;padding:5px 8px;border:1px solid var(--brd);border-radius:7px;background:var(--sur)" onchange="_faltasAnio=parseInt(this.value)||${_faltasAnio};_sinNadaCache=null;document.getElementById('faltasPanelTitulo').textContent='Análisis de Faltas — '+MESES_FAC[_faltasMes-1]+' '+_faltasAnio">
     </div>
     <div id="faltasDropzone" class="faltas-drop" onclick="document.getElementById('faltasFile').click()">
       <div class="faltas-drop-ico">📋</div>
       <div class="faltas-drop-txt">Haz clic o arrastra aquí el archivo Excel</div>
-      <div class="faltas-drop-sub">El mes se detecta automáticamente del nombre de la hoja</div>
+      <div class="faltas-drop-sub">El mes se detecta automáticamente del contenido del archivo</div>
     </div>
     <div id="faltasResult"></div>
   </div>`;
@@ -2022,26 +2056,43 @@ async function processFaltasFile(file) {
   try {
     const data = await file.arrayBuffer();
     const wb   = XLSX.read(data, { type: 'array' });
-    const sheetName = wb.SheetNames.find(n => n.toUpperCase().includes('FALT')) || null;
+
+    // Busca la primera hoja con datos reales que tenga encabezado
+    // TARJETA/NOMBRE/FALTAS — igual que hace Python con los archivos
+    // LISTADO_<controlador>.xlsx (el nombre de hoja es el del controlador,
+    // ej. "MIGUEL", no lleva "FALTAS" en el título).
+    let sheetName = null, header = null, rows = null;
+    for (const name of wb.SheetNames) {
+      const candidateRows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: null });
+      if (candidateRows.length <= 5) continue; // hojas vacías tipo "Hoja1"
+      const found = findFaltasHeaderInSheet(candidateRows);
+      if (found) { sheetName = name; header = found; rows = candidateRows; break; }
+    }
     if (!sheetName) {
-      res.innerHTML = `<div class="empty-adv" style="color:#e05252">No se encontró ninguna hoja de faltas en el archivo. Asegúrate de que el nombre de la hoja contenga "FALT" (ej: FALTAS MAYO, FALTAS JUNIO).</div>`;
+      res.innerHTML = `<div class="empty-adv" style="color:#e05252">No encontré una hoja con columnas TARJETA, NOMBRE y FALTAS en el archivo. Revisa que sea un listado de asistencia (como LISTADO_&lt;controlador&gt;.xlsx).</div>`;
       return;
     }
-    // Auto-detectar mes del nombre de la hoja
-    const mesDetectado = MESES_FAC.findIndex(m => sheetName.toUpperCase().includes(m));
-    if (mesDetectado >= 0) {
-      _faltasMes = mesDetectado + 1;
+
+    // Auto-detectar mes/año a partir del texto del archivo (ej. "QNA: 2NDA. JULIO 2026")
+    const detectado = detectMesAnioFromRows(rows);
+    if (detectado.mes) {
+      _faltasMes = detectado.mes;
       _sinNadaCache = null;
       const selM = document.getElementById('faltasMesSel');
       if (selM) selM.value = String(_faltasMes);
-      const tit = document.getElementById('faltasPanelTitulo');
-      if (tit) tit.textContent = `Análisis de Faltas — ${MESES_FAC[_faltasMes-1]} ${_faltasAnio}`;
     }
-    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, defval: null });
-    const analysis = analyzeFaltas(rows);
-    _faltasAnalysis = { ...analysis, rows, fileName: file.name };
+    if (detectado.anio) {
+      _faltasAnio = detectado.anio;
+      const inpA = document.getElementById('faltasAnioInput');
+      if (inpA) inpA.value = String(_faltasAnio);
+    }
+    const tit = document.getElementById('faltasPanelTitulo');
+    if (tit) tit.textContent = `Análisis de Faltas — ${MESES_FAC[_faltasMes-1]} ${_faltasAnio}`;
+
+    const analysis = analyzeFaltas(rows, header);
+    _faltasAnalysis = { ...analysis, rows, header, fileName: file.name };
     renderFaltasResultado(analysis);
-    showToast(`Análisis completado · ${analysis.results.length} personas`);
+    showToast(`Análisis completado · ${analysis.results.length} personas · hoja "${sheetName}"`);
   } catch(e) {
     res.innerHTML = `<div class="empty-adv" style="color:#e05252">Error al leer el archivo: ${esc(e.message)}</div>`;
     console.error(e);
@@ -2068,7 +2119,7 @@ function renderFaltasResultado(analysis) {
     <div class="kpi-grid" style="margin-top:4px">
       <div class="kpi kpi-navy"><div class="kpi-num">${totalPersonas}</div><div class="kpi-lbl">Personas con faltas</div></div>
       <div class="kpi kpi-slate"><div class="kpi-num">${totalFaltas}</div><div class="kpi-lbl">Días falta originales</div></div>
-      <div class="kpi kpi-teal"><div class="kpi-num">${totalJust}<span style="font-size:14px;margin-left:4px">(${pctJust}%)</span></div><div class="kpi-lbl">Justificados</div><div class="kpi-sub">Con cobertura activa</div></div>
+      <div class="kpi kpi-teal"><div class="kpi-num">${totalJust}<span style="font-size:16px;margin-left:4px">(${pctJust}%)</span></div><div class="kpi-lbl">Justificados</div><div class="kpi-sub">Con cobertura activa</div></div>
       <div class="kpi kpi-amber"><div class="kpi-num">${totalNoJust}</div><div class="kpi-lbl">Sin justificar</div><div class="kpi-sub">Permanecen en reporte</div></div>
       <div class="kpi kpi-slate"><div class="kpi-num">${sinNada.length}</div><div class="kpi-lbl">Sin nada en Mayo</div><div class="kpi-sub">Sin faltas ni cobertura</div></div>
     </div>
@@ -2088,9 +2139,9 @@ function renderFaltasResultado(analysis) {
               <td class="mono acc">${esc(r.tarjeta)}</td>
               <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(fmtNombre(r.nombreDB))}</td>
               <td class="nc">${r.diasOriginales.length}</td>
-              <td style="color:var(--acc2);font-family:'IBM Plex Mono',monospace;font-size:10px">${r.diasJustificados.length}</td>
+              <td style="color:var(--acc2);font-family:'IBM Plex Mono',monospace;font-size:13px">${r.diasJustificados.length}</td>
               <td class="nc" style="color:${r.diasNoJustificados.length?'var(--amber)':'var(--acc2)'}">${r.diasNoJustificados.length}</td>
-              <td style="font-size:10px;color:var(--tx2)">${esc(r.servicio)}</td>
+              <td style="font-size:13px;color:var(--tx2)">${esc(r.servicio)}</td>
             </tr>`).join('')}
           </tbody></table>
           </div>
@@ -2136,6 +2187,41 @@ function renderFaltasResultado(analysis) {
             <option value="sin-justificar">Todas sin justificar</option>
             <option value="total-justificadas">Totalmente justificadas</option>
           </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Generar Constancia Global — documento final, mismo formato que generaba Python -->
+    <div class="adv-card">
+      <div class="adv-card-h"><h3>🧾 Constancia Global de Faltas</h3><span>Documento final, listo para firmar</span></div>
+      <div class="adv-card-body">
+        <p style="font-size:14px;color:var(--tx2);margin:0 0 10px;line-height:1.5">
+          Genera el Excel oficial (hoja "QNA GLOBAL" con folio, filiación, código y días, más la CARÁTULA resumen)
+          con las faltas ya descontadas por licencias médicas, LCGS y facilidades — mismo formato que antes generaba el script de Python.
+        </p>
+        <div class="faltas-filters">
+          <div class="adv-field"><label>No. de quincena (QNA)</label><input type="number" id="cQnaNum" placeholder="ej. 15" min="1"></div>
+          <div class="adv-field"><label>Quincena</label>
+            <select id="cQuincena"><option value="1">1a (1–15)</option><option value="2" selected>2a (16–fin de mes)</option></select>
+          </div>
+          <div class="adv-field"><label>Folio inicial</label><input type="number" id="cFolioInicial" placeholder="último folio + 1" min="1"></div>
+          <div class="adv-field"><label>No. de documento</label><input type="number" id="cNoDocumento" value="8001"></div>
+          <div class="adv-field"><label>Cód. unidad responsable</label><input type="number" id="cUnidadCod" value="160"></div>
+          <div class="adv-field"><label>Unidad responsable</label><input type="text" id="cUnidadNombre" value="HOSPITAL DE LA MUJER"></div>
+        </div>
+        <div class="faltas-filters" style="border-top:none;padding-top:0">
+          <div class="adv-field adv-field-wide">
+            <label>Base de código de puesto (opcional — RFC → código, hoja "HORARIOS")</label>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <button class="btn sec" onclick="document.getElementById('constanciaBaseCodigoFile').click()">📂 Subir base de código</button>
+              <input type="file" id="constanciaBaseCodigoFile" accept=".xlsx" style="display:none" onchange="handleConstanciaBaseCodigoFile(this)">
+              <span id="constanciaBaseCodigoEstado" style="font-size:13px;color:var(--tx3)">Sin cargar — la columna CÓDIGO saldrá en blanco</span>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn big" onclick="generarConstanciaGlobalXLSX()">⬇ Generar Constancia Global (.xlsx)</button>
+          <button class="btn sec" onclick="downloadConstanciaPack()">⬇ Solo listado + config.json (para Python)</button>
         </div>
       </div>
     </div>
@@ -2187,7 +2273,7 @@ function renderFaltasTablas(analysis, sinNada) {
     const db  = esc(r.nombre  || r.nombreDB);
     const exc = esc(r.nombreExcel || '');
     const diff = exc && normNombreSimple(r.nombre||r.nombreDB) !== normNombreSimple(r.nombreExcel||'');
-    return diff ? `${db}<br><span style="font-size:9px;color:var(--tx3)">${exc}</span>` : db;
+    return diff ? `${db}<br><span style="font-size:12px;color:var(--tx3)">${exc}</span>` : db;
   };
 
   h += `<div class="adv-card">
@@ -2195,10 +2281,10 @@ function renderFaltasTablas(analysis, sinNada) {
     <div class="adv-table-wrap">
     ${justRows.length ? `<table><thead><tr><th>Tarjeta</th><th>RFC</th><th>Nombre (BD)</th><th>Servicio</th><th>Turno</th><th>Día</th><th>Tipo</th><th>Cobertura</th></tr></thead><tbody>` +
       justRows.map(r => `<tr>
-        <td class="mono acc">${esc(r.tarjeta)}</td><td class="mono" style="font-size:9px">${esc(r.rfc)}</td><td>${showNombre(r)}</td><td>${esc(r.servicio)}</td><td>${esc(r.turno)}</td>
+        <td class="mono acc">${esc(r.tarjeta)}</td><td class="mono" style="font-size:12px">${esc(r.rfc)}</td><td>${showNombre(r)}</td><td>${esc(r.servicio)}</td><td>${esc(r.turno)}</td>
         <td class="nc" style="white-space:nowrap">${r.dia}/${pad(_faltasMes)}/${_faltasAnio}</td>
         <td><span class="tipo-badge tipo-${r.tipo.replace('.','').toLowerCase().split('.')[0]}">${esc(r.tipo)}</span></td>
-        <td style="font-size:10px;color:var(--tx2);min-width:160px">${esc(r.detalle)}</td>
+        <td style="font-size:13px;color:var(--tx2);min-width:160px">${esc(r.detalle)}</td>
       </tr>`).join('') + '</tbody></table>'
     : '<div class="empty-adv">No hay faltas justificadas con los filtros actuales.</div>'}
     </div></div>`;
@@ -2242,29 +2328,84 @@ function renderFaltasTablas(analysis, sinNada) {
 /* ═══════════════════════════════════════════════════════════
    ANÁLISIS DE FALTAS — DESCARGAS XLSX
 ═══════════════════════════════════════════════════════════ */
-function downloadCorregidas() {
-  if (!_faltasAnalysis || !window.XLSX) return;
-  const { results, rows } = _faltasAnalysis;
+/* Rebuild las filas subidas: quita de FALTAS los días justificados y agrega
+   una columna R.F.C. al final (para que Python pueda cruzar por RFC en vez
+   de solo por nombre al generar la Constancia Global). */
+function buildFaltasCorregidasRows() {
+  const { results, rows, header } = _faltasAnalysis;
+  const { tarjeta: cT, faltas: cF } = header.col;
   const justMap = new Map(results.map(r => [r.tarjeta, new Set(r.diasJustificados)]));
+  const rfcMap  = new Map(results.map(r => [r.tarjeta, r.rfc]));
 
-  // Rebuild rows: keep structure, remove justified dias from FALTAS column
-  const outRows = rows.map((row, idx) => {
-    if (idx < 2 || !row || row[1] == null) return row ? [...row] : [];
-    const tarjeta = String(row[1] ?? '').trim().replace(/^0+/, '') || '0';
-    const justified = justMap.get(tarjeta);
-    if (!justified || !justified.size) return [...row];
-    const diasOrig = parseFaltasDias(row[3]);
-    const diasLeft = diasOrig.filter(d => !justified.has(d));
-    const newRow   = [...row];
-    newRow[3]      = diasLeft.length ? diasLeft.join(', ') : null;
+  return rows.map((row, idx) => {
+    if (idx === header.headerRowIdx) return row ? [...row, 'R.F.C.'] : ['R.F.C.'];
+    if (!row || row[cT] == null) return row ? [...row] : [];
+    const tarjeta    = String(row[cT] ?? '').trim().replace(/^0+/, '') || '0';
+    const justified  = justMap.get(tarjeta);
+    const diasOrig   = parseFaltasDias(row[cF]);
+    const diasLeft   = justified && justified.size ? diasOrig.filter(d => !justified.has(d)) : diasOrig;
+    const newRow     = [...row];
+    newRow[cF]       = diasLeft.length ? diasLeft.join(', ') : null;
+    newRow.push(rfcMap.get(tarjeta) || '');
     return newRow;
   });
+}
 
-  const ws = XLSX.utils.aoa_to_sheet(outRows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'FALTAS MAYO');
-  XLSX.writeFile(wb, `FALTAS_CORREGIDAS_${MESES_FAC[_faltasMes-1]}_${_faltasAnio}.xlsx`);
+function faltasCorregidasFileName() {
+  return `FALTAS_CORREGIDAS_${MESES_FAC[_faltasMes-1]}_${_faltasAnio}.xlsx`;
+}
+
+function downloadCorregidas() {
+  if (!_faltasAnalysis || !window.XLSX) return;
+  const mes = MESES_FAC[_faltasMes-1];
+  const ws  = XLSX.utils.aoa_to_sheet(buildFaltasCorregidasRows());
+  const wb  = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, `FALTAS ${mes}`.slice(0, 31));
+  XLSX.writeFile(wb, faltasCorregidasFileName());
   showToast('Faltas corregidas descargadas');
+}
+
+/* Descarga el listado corregido + un constancia_config.json listo para que
+   generar_constancia.py (carpeta Integration) lo lea sin editar nada a mano. */
+function downloadConstanciaPack() {
+  if (!_faltasAnalysis || !window.XLSX) return;
+
+  const qnaNum    = parseInt(document.getElementById('cQnaNum')?.value, 10);
+  const folioIni  = parseInt(document.getElementById('cFolioInicial')?.value, 10);
+  if (!qnaNum || !folioIni) { showToast('Falta el número de quincena o el folio inicial', 'err'); return; }
+
+  const quincena     = parseInt(document.getElementById('cQuincena')?.value, 10) || 2;
+  const noDocumento  = parseInt(document.getElementById('cNoDocumento')?.value, 10) || 8001;
+  const unidadCod    = parseInt(document.getElementById('cUnidadCod')?.value, 10) || 160;
+  const unidadNombre = (document.getElementById('cUnidadNombre')?.value || 'HOSPITAL DE LA MUJER').trim();
+
+  const mes      = MESES_FAC[_faltasMes-1];
+  const fileName = faltasCorregidasFileName();
+
+  const ws = XLSX.utils.aoa_to_sheet(buildFaltasCorregidasRows());
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, `FALTAS ${mes}`.slice(0, 31));
+  XLSX.writeFile(wb, fileName);
+
+  const cfg = {
+    LISTADO_FILES: [fileName],
+    QNA_NUM: qnaNum,
+    MES: mes,
+    ANIO: String(_faltasAnio),
+    QUINCENA_1_O_2: quincena,
+    FOLIO_INICIAL: folioIni,
+    NO_DOCUMENTO: noDocumento,
+    UNIDAD_RESPONSABLE_COD: unidadCod,
+    UNIDAD_RESPONSABLE_NOMBRE: unidadNombre
+  };
+  const blob = new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = 'constancia_config.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+
+  showToast('Listado y config descargados · muévelos a Integration/');
 }
 
 function downloadReporteJustificaciones() {
@@ -2681,7 +2822,7 @@ function openValesPanel() {
         </div>
         <div class="vconf-field vconf-run">
           <button class="btn" id="vRunBtn" onclick="runValesAnalysis()">▶ Calcular elegibilidad</button>
-          <div style="font-size:9px;color:var(--tx3);margin-top:4px">La base viene de los 3 Excel (data.json)</div>
+          <div style="font-size:12px;color:var(--tx3);margin-top:4px">La base viene de los 3 Excel (data.json)</div>
         </div>
       </div>
     </div>
@@ -2754,7 +2895,7 @@ function renderValesResultados() {
   res.innerHTML = `
     <!-- KPIs -->
     <div class="kpi-grid">
-      <div class="kpi kpi-teal"><div class="kpi-num">${elegibles.length}<span style="font-size:13px;margin-left:5px;font-weight:400">(${pct}%)</span></div><div class="kpi-lbl">Elegibles</div><div class="kpi-sub">${mesNom} ${_valesEvalY}</div></div>
+      <div class="kpi kpi-teal"><div class="kpi-num">${elegibles.length}<span style="font-size:15px;margin-left:5px;font-weight:400">(${pct}%)</span></div><div class="kpi-lbl">Elegibles</div><div class="kpi-sub">${mesNom} ${_valesEvalY}</div></div>
       <div class="kpi kpi-navy"><div class="kpi-num">${R.length}</div><div class="kpi-lbl">Total evaluados</div></div>
       <div class="kpi kpi-amber"><div class="kpi-num">${incidencias.length}</div><div class="kpi-lbl">Con incidencias</div><div class="kpi-sub">Faltas/retardos/licencias/fac.</div></div>
       <div class="kpi kpi-slate"><div class="kpi-num">${valeReciente.length}</div><div class="kpi-lbl">Vale reciente</div><div class="kpi-sub">< 6 meses</div></div>
@@ -2884,7 +3025,7 @@ function renderValesTabla(R) {
   el.innerHTML = `<div class="adv-card">
     <div class="adv-card-h">
       <h3>Detalle de elegibilidad · ${filtered.length} personas</h3>
-      <span style="font-size:10px;color:var(--tx3)">Haz clic en una fila para ver el detalle completo</span>
+      <span style="font-size:13px;color:var(--tx3)">Haz clic en una fila para ver el detalle completo</span>
     </div>
     <div class="vales-table-wrap">
     <table class="vales-table">
@@ -2895,18 +3036,18 @@ function renderValesTabla(R) {
       </tr></thead>
       <tbody>${filtered.map(p => {
         const sel = _valesSelKey === p.tarjetaKey;
-        const lv  = p.lastVale ? `<span class="last-vale-badge">${esc(p.lastVale.label)}</span>` : `<span style="color:var(--tx3);font-size:10px">Sin vale</span>`;
+        const lv  = p.lastVale ? `<span class="last-vale-badge">${esc(p.lastVale.label)}</span>` : `<span style="color:var(--tx3);font-size:13px">Sin vale</span>`;
         const motHtml = p.motivos.length
           ? p.motivos.map(m=>`<div class="vmotivo">${m.icon} ${esc(m.desc)}</div>`).join('')
           : `<div class="vmotivo vmotivo-ok">✓ Sin observaciones</div>`;
         return `<tr class="vrow-${p.estado.toLowerCase()} vrow-clickable${sel?' vrow-sel':''}" onclick="selectValesPerson('${esc(p.tarjetaKey)}')">
           <td>${ESTADO_HTML[p.estado]||''}</td>
           <td class="mono acc">${esc(p.tarjeta)}</td>
-          <td class="mono" style="font-size:9px">${esc(p.rfcDB)}</td>
+          <td class="mono" style="font-size:12px">${esc(p.rfcDB)}</td>
           <td class="vnom" title="${esc(fmtNombre(p.nombre))}">${esc(fmtNombre(p.nombre))}</td>
-          <td style="font-size:10px">${esc(p.categoria)}</td>
-          <td style="font-size:10px">${esc(p.turno)}</td>
-          <td style="font-size:10px">${esc(p.servicio)}</td>
+          <td style="font-size:13px">${esc(p.categoria)}</td>
+          <td style="font-size:13px">${esc(p.turno)}</td>
+          <td style="font-size:13px">${esc(p.servicio)}</td>
           <td>${lv}</td>
           <td class="vmotivo-cell">${motHtml}</td>
         </tr>`;
@@ -2938,7 +3079,7 @@ function selectValesPerson(tarjetaKey) {
   };
 
   const lv = persona.lastVale
-    ? `<span class="last-vale-badge" style="font-size:11px">${esc(persona.lastVale.label)}</span>`
+    ? `<span class="last-vale-badge" style="font-size:14px">${esc(persona.lastVale.label)}</span>`
     : `<span style="color:var(--tx3)">Sin vale previo registrado</span>`;
 
   let incHtml = '';
@@ -2960,7 +3101,7 @@ function selectValesPerson(tarjetaKey) {
   }
   if (persona.detalle.licencias?.length) {
     persona.detalle.licencias.forEach(l => {
-      incHtml += `<div class="vdet-inc"><span class="vdet-ico">🏥</span><div><b>Licencia médica</b><br>${esc(l.inicio)} – ${esc(l.termino)}<br><span style="font-size:9px;color:var(--tx3)">${esc(l.diagnostico)}</span></div></div>`;
+      incHtml += `<div class="vdet-inc"><span class="vdet-ico">🏥</span><div><b>Licencia médica</b><br>${esc(l.inicio)} – ${esc(l.termino)}<br><span style="font-size:12px;color:var(--tx3)">${esc(l.diagnostico)}</span></div></div>`;
     });
   }
   if (persona.lastVale && persona.motivos.some(m=>m.tipo==='VALE_RECIENTE')) {
@@ -2971,11 +3112,11 @@ function selectValesPerson(tarjetaKey) {
 
   det.innerHTML = `<div class="vdet-header">
     <button class="vdet-close" onclick="closeValesDetalle()">✕</button>
-    <div class="av" style="width:42px;height:42px;font-size:14px;border-radius:10px;flex-shrink:0">${esc(getIni(persona.nombre))}</div>
+    <div class="av" style="width:42px;height:42px;font-size:16px;border-radius:10px;flex-shrink:0">${esc(getIni(persona.nombre))}</div>
     <div style="flex:1;min-width:0">
-      <div class="pi-nom" style="font-size:16px">${esc(fmtNombre(persona.nombre))}</div>
-      <div style="font-size:11px;color:var(--tx2)">Tarjeta: <b>${esc(persona.tarjeta)}</b> · RFC: <b>${esc(persona.rfcDB)}</b></div>
-      <div style="font-size:11px;color:var(--tx2)">${esc(persona.categoria)} · ${esc(persona.turno)}${persona.servicio&&persona.servicio!=='—'?' · '+esc(persona.servicio):''}</div>
+      <div class="pi-nom" style="font-size:18px">${esc(fmtNombre(persona.nombre))}</div>
+      <div style="font-size:14px;color:var(--tx2)">Tarjeta: <b>${esc(persona.tarjeta)}</b> · RFC: <b>${esc(persona.rfcDB)}</b></div>
+      <div style="font-size:14px;color:var(--tx2)">${esc(persona.categoria)} · ${esc(persona.turno)}${persona.servicio&&persona.servicio!=='—'?' · '+esc(persona.servicio):''}</div>
     </div>
   </div>
   ${ESTADO_HTML[persona.estado]||''}
