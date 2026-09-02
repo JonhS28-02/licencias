@@ -1,78 +1,104 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Control de Licencias — Hospital de la Mujer</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#163c35">
+  <title>Gestión de Personal — Hospital de la Mujer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-
-<!-- ── HEADER ──────────────────────────────────────── -->
-<header>
-  <div class="brand">
-    <div class="logo">HM</div>
-    <div class="hdr-txt">
-      <h1>Sistema de Control de Licencias y Facilidades</h1>
-      <p>Hospital de la Mujer · Consulta y reportes administrativos</p>
-    </div>
-  </div>
-  <div class="hdr-stats">
-    <div class="pill">Personas <b id="sp">—</b></div>
-    <div class="pill">Registros <b id="sr">—</b></div>
-    <div class="pill">Archivos <b>4</b></div>
-  </div>
-</header>
-<nav class="toolbar">
-  <button class="btn" onclick="openReporteFacilidadesAvanzado('facilidades')"><span class="btn-ico">📊</span> Reportes avanzados</button>
-  <button class="btn sec" onclick="openFaltasPanel()"><span class="btn-ico">📋</span> Analizar Faltas</button>
-  <button class="btn sec btn-vales" onclick="openValesPanel()"><span class="btn-ico">🎫</span> Vales</button>
-</nav>
-
-<!-- ── LAYOUT ──────────────────────────────────────── -->
-<div class="layout">
-
-  <!-- PANEL IZQ -->
-  <div class="left">
-    <div class="sbox">
-      <div class="slbl">Buscar por RFC, nombre o N° tarjeta</div>
-      <div class="sw" id="sw">
-        <span class="s-ico">⌕</span>
-        <input type="text" class="si" id="si" placeholder="RFC, nombre o N° tarjeta  (Ctrl+K)" autocomplete="off" spellcheck="false">
-        <button class="s-clr" id="sc">✕</button>
-        <div class="ac" id="ac"></div>
+  <header class="app-header">
+    <div class="brand" aria-label="Identidad del sistema">
+      <div class="logo" aria-hidden="true">HM</div>
+      <div class="hdr-txt">
+        <span class="institution">Secretaría de Salud · Hospital de la Mujer</span>
+        <h1>Gestión de personal</h1>
       </div>
     </div>
-    <div class="slist">
-      <div class="s-sec-lbl" id="sl">Recientes</div>
-      <div id="rl"></div>
+    <div class="header-context" aria-label="Estado de las fuentes de información">
+      <span class="sync-status"><span class="status-dot"></span> Base consolidada</span>
+      <div class="hdr-stats">
+        <div class="pill"><b id="sp">—</b><span>personas</span></div>
+        <div class="pill"><b id="sr">—</b><span>registros</span></div>
+        <div class="pill"><b id="ss">—</b><span>fuentes</span></div>
+      </div>
     </div>
-  </div>
+  </header>
 
-  <!-- PANEL DER -->
-  <div class="right">
-    <div class="loading" id="ld">
-      <div class="spinner"></div>
-      <span style="font-size:12px;color:var(--tx2)">Cargando datos…</span>
-    </div>
-    <div class="empty" id="em">
-      <div class="empty-ico">⚕</div>
-      <h2>Busca a una persona por RFC o nombre</h2>
-      <p>Escribe en el buscador de la izquierda</p>
-    </div>
-    <div class="rp" id="rp"></div>
-  </div>
-</div>
+  <nav class="toolbar" aria-label="Módulos principales">
+    <button class="module-nav active" type="button" onclick="resetWorkspace()" aria-current="page">
+      <span class="nav-icon" aria-hidden="true">⌕</span><span><b>Consulta integral</b><small>Trabajadores e históricos</small></span>
+    </button>
+    <button class="module-nav" type="button" onclick="openFaltasPanel()">
+      <span class="nav-icon" aria-hidden="true">✓</span><span><b>Validación de faltas</b><small>Cruce de incidencias</small></span>
+    </button>
+    <button class="module-nav" type="button" onclick="openReporteFacilidadesAvanzado('facilidades')">
+      <span class="nav-icon" aria-hidden="true">▤</span><span><b>Reportes</b><small>Licencias y facilidades</small></span>
+    </button>
+    <button class="module-nav" type="button" onclick="openValesPanel()">
+      <span class="nav-icon" aria-hidden="true">◇</span><span><b>Vales</b><small>Análisis de elegibilidad</small></span>
+    </button>
+  </nav>
 
-<!-- ── LIBRERÍAS ───────────────────────────────────── -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <main class="layout">
+    <aside class="left" aria-label="Búsqueda de trabajadores">
+      <div class="sbox">
+        <div class="sidebar-heading">
+          <div><span class="eyebrow">Directorio integrado</span><h2>Buscar trabajador</h2></div>
+          <kbd>Ctrl K</kbd>
+        </div>
+        <label class="slbl" for="si">Nombre, RFC o número de tarjeta</label>
+        <div class="sw" id="sw">
+          <span class="s-ico" aria-hidden="true">⌕</span>
+          <input type="search" class="si" id="si" placeholder="Escribe al menos 2 caracteres" autocomplete="off" spellcheck="false" aria-autocomplete="list" aria-controls="ac" aria-expanded="false">
+          <button class="s-clr" id="sc" type="button" aria-label="Limpiar búsqueda">×</button>
+          <div class="ac" id="ac" role="listbox"></div>
+        </div>
+        <p class="search-helper">Consulta todas las fuentes sin abrir archivos por separado.</p>
+      </div>
+      <div class="slist">
+        <div class="s-sec-lbl"><span id="sl">Consultas recientes</span><small>Esta sesión</small></div>
+        <div id="rl" class="recent-list"></div>
+        <div class="recent-empty">Los trabajadores consultados aparecerán aquí para volver rápidamente a su expediente.</div>
+      </div>
+      <div class="sidebar-foot"><span class="status-dot"></span><span>Datos listos para consulta</span></div>
+    </aside>
 
-<script src="cs.js"></script>
-<script src="constancia.js"></script>
+    <section class="right" aria-label="Área de trabajo" aria-live="polite">
+      <div class="loading" id="ld">
+        <div class="spinner" aria-hidden="true"></div>
+        <div><strong>Preparando información</strong><span>Cargando y relacionando fuentes…</span></div>
+      </div>
+      <div class="empty" id="em">
+        <div class="empty-panel">
+          <div class="empty-kicker">Consulta integral de personal</div>
+          <h2>Encuentra el contexto completo de un trabajador</h2>
+          <p>Busca por nombre, RFC o tarjeta para revisar licencias médicas, LCGS, facilidades administrativas e históricos en un solo lugar.</p>
+          <button class="btn" type="button" onclick="document.getElementById('si').focus()">Buscar trabajador</button>
+          <div class="workflow" aria-label="Flujo de consulta">
+            <span><b>1</b> Buscar</span><i></i><span><b>2</b> Revisar incidencias</span><i></i><span><b>3</b> Validar contexto</span>
+          </div>
+        </div>
+        <div class="capability-grid" aria-label="Procesos disponibles">
+          <button type="button" onclick="openFaltasPanel()"><span>Validación de faltas</span><small>Detecta coberturas y faltas sin justificar</small><b>Ir al módulo →</b></button>
+          <button type="button" onclick="openReporteFacilidadesAvanzado('facilidades')"><span>Reportes consolidados</span><small>Filtra licencias, LCGS y facilidades</small><b>Consultar →</b></button>
+          <button type="button" onclick="openValesPanel()"><span>Análisis de vales</span><small>Cruza incidencias y elegibilidad</small><b>Analizar →</b></button>
+        </div>
+      </div>
+      <div class="rp" id="rp"></div>
+    </section>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="cs.js"></script>
+  <script src="constancia.js"></script>
 </body>
 </html>

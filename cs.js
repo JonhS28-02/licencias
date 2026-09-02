@@ -15,6 +15,27 @@ let _faltasAnio = 2026;
 let _valesNombresFilter  = null;   // Set de tarjetaKeys, null = todos
 let _valesNombresNoMatch = [];
 
+/* Navegación visual del espacio de trabajo; no altera la lógica de negocio. */
+function setActiveModule(index) {
+  document.querySelectorAll('.module-nav').forEach((el, i) => {
+    const active = i === index;
+    el.classList.toggle('active', active);
+    if (active) el.setAttribute('aria-current', 'page');
+    else el.removeAttribute('aria-current');
+  });
+}
+
+function resetWorkspace() {
+  cur = null;
+  const rp = document.getElementById('rp');
+  rp.classList.remove('on');
+  rp.innerHTML = '';
+  document.getElementById('em').style.display = 'flex';
+  renderSide();
+  setActiveModule(0);
+  document.getElementById('si')?.focus();
+}
+
 /* Toast notifications */
 function showToast(msg, type = 'ok') {
   const el = document.createElement('div');
@@ -129,6 +150,7 @@ async function loadData() {
     Object.values(DB).forEach(p => Object.values(p.fuentes).forEach(s => Object.values(s).forEach(rr => tr += rr.length)));
     document.getElementById('sp').textContent = Object.keys(DB).length.toLocaleString('es-MX');
     document.getElementById('sr').textContent = tr.toLocaleString('es-MX');
+    document.getElementById('ss').textContent = new Set(Object.values(DB).flatMap(p => Object.keys(p.fuentes || {}))).size.toLocaleString('es-MX');
     document.getElementById('ld').style.display = 'none';
     document.getElementById('em').style.display = 'flex';
     // Construir índice inverso tarjeta → RFC para búsqueda
@@ -173,13 +195,19 @@ function setupSearch() {
     sc.style.display = q ? 'block' : 'none';
     if (q.length < 2) { hideAC(); return; }
     const res = searchDB(q, 14);
-    if (!res.length) { hideAC(); return; }
+    if (!res.length) {
+      acItems = []; acIdx = -1;
+      ac.innerHTML = `<div class="search-no-results"><strong>Sin coincidencias</strong><span>Revisa el nombre, RFC o número de tarjeta.</span></div>`;
+      ac.style.display = 'block';
+      inp.setAttribute('aria-expanded', 'true');
+      return;
+    }
     acItems = res; acIdx = -1;
     ac.innerHTML = res.map((p, i) => {
       const tarjetaBadge = p._matchTarjeta
         ? `<span class="aci-tarjeta">🪪 ${hl(p._matchTarjeta, q.replace(/^0+/,''))}</span>`
         : '';
-      return `<div class="aci" data-rfc="${esc(p.rfc)}" data-i="${i}">
+      return `<div class="aci" role="option" data-rfc="${esc(p.rfc)}" data-i="${i}">
         <div class="aci-rfc-row">
           <span class="aci-rfc">${hl(p.rfc, q)}</span>
           ${tarjetaBadge}
@@ -194,6 +222,7 @@ function setupSearch() {
       ac.innerHTML += `<div style="padding:6px 13px;font-size:12px;color:var(--tx3);font-family:'IBM Plex Mono',monospace;border-top:1px solid var(--brd);text-align:center">+${total - res.length} más — escribe más para filtrar</div>`;
     }
     ac.style.display = 'block';
+    inp.setAttribute('aria-expanded', 'true');
   });
 
   inp.addEventListener('keydown', e => {
@@ -223,7 +252,11 @@ function setupSearch() {
   });
 }
 
-function hideAC() { document.getElementById('ac').style.display = 'none'; acItems = []; acIdx = -1; }
+function hideAC() {
+  document.getElementById('ac').style.display = 'none';
+  document.getElementById('si')?.setAttribute('aria-expanded', 'false');
+  acItems = []; acIdx = -1;
+}
 
 function searchDB(q, lim) {
   const res  = [];
@@ -279,17 +312,18 @@ function pick(rfc) {
   hist.unshift(rfc); if (hist.length > 25) hist.pop();
   renderSide();
   renderPerson(p);
+  setActiveModule(0);
 }
 
 function renderSide() {
   document.getElementById('rl').innerHTML = hist.map(r => {
     const p = DB[r]; if (!p) return '';
     const dots = Object.keys(p.fuentes).map(s => `<div class="rdot" style="background:${srcColor(s)}"></div>`).join('');
-    return `<div class="ri ${r === cur ? 'act' : ''}" onclick="pick('${esc(r)}')">
+    return `<button type="button" class="ri ${r === cur ? 'act' : ''}" onclick="pick('${esc(r)}')" aria-label="Abrir expediente de ${esc(fmtNombre(p.nombre) || r)}">
       <span class="ri-rfc">${esc(r)}</span>
       <span class="ri-nom">${esc(fmtNombre(p.nombre) || '—')}</span>
       <div class="ri-dots">${dots}</div>
-    </div>`;
+    </button>`;
   }).join('');
 }
 
@@ -402,7 +436,7 @@ function computePersonStats(p) {
   return {licDias,licCount,lcgsDias,lcgsCount,facCount,tarjeta,servicio,turno};
 }
 
-function renderMiniCal(facValue, mesIdx) {
+function renderMiniCal(facValue, mesIdx, colorClass='mc-navy') {
   const year=2026, daysInMonth=new Date(year,mesIdx+1,0).getDate();
   const firstDow=(new Date(year,mesIdx,1).getDay()+6)%7; // Mon=0
   const highlighted=new Set(), rangeSet=new Set();
@@ -421,12 +455,74 @@ function renderMiniCal(facValue, mesIdx) {
   let col=firstDow;
   for(let d=1;d<=daysInMonth;d++){
     const hi=highlighted.has(d), range=rangeSet.has(d);
-    g+=`<div class="mc-day${hi?' mc-hi':''}${range?' mc-range':''}">${d}</div>`;
+    g+=`<div class="mc-day${hi?` mc-hi ${colorClass}`:''}${range?` mc-range ${colorClass}`:''}">${d}</div>`;
     col++;
     if(col%7===0&&d<daysInMonth) g+=`</div><div class="mini-cal-row">`;
   }
   return g+`</div></div>`;
 }
+
+/* Calendario para un rango continuo de fechas (Licencias Médicas / LCGS) —
+   a diferencia de Facilidades no está atado a un año fijo ni a 12 columnas
+   de mes; dibuja un mini-calendario por cada mes que el rango atraviesa. */
+function renderRangeCal(start, end, colorClass) {
+  if (!start || isNaN(start.getTime())) return '';
+  const endD = (end && !isNaN(end.getTime())) ? end : start;
+  const s = start <= endD ? start : endD, e = start <= endD ? endD : start;
+
+  const months = [];
+  let cy = s.getFullYear(), cm = s.getMonth();
+  while (cy < e.getFullYear() || (cy === e.getFullYear() && cm <= e.getMonth())) {
+    months.push({ y: cy, m: cm });
+    cm++; if (cm > 11) { cm = 0; cy++; }
+    if (months.length >= 6) break; // límite de seguridad para rangos muy largos
+  }
+
+  const DOWS = 'LMXJVSD';
+  return `<div class="range-cal-list">` + months.map(({ y, m }) => {
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const firstDow = (new Date(y, m, 1).getDay() + 6) % 7;
+    let g = `<div class="mini-cal"><div class="mini-cal-lbl">${MESES_FAC[m]} ${y}</div><div class="mini-cal-row mcr-head">${[...DOWS].map(d => `<div>${d}</div>`).join('')}</div><div class="mini-cal-row">`;
+    for (let i = 0; i < firstDow; i++) g += `<div class="mc-empty"></div>`;
+    let col = firstDow;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dt = new Date(y, m, d);
+      const hi = dt >= s && dt <= e;
+      g += `<div class="mc-day${hi ? ` mc-hi ${colorClass}` : ''}">${d}</div>`;
+      col++;
+      if (col % 7 === 0 && d < daysInMonth) g += `</div><div class="mini-cal-row">`;
+    }
+    return g + `</div></div>`;
+  }).join('') + `</div>`;
+}
+
+/* Rango de fechas de una licencia médica a partir de las columnas D/M/A
+   (inicio) y D_2/M_2/A_2 (término, cae al inicio si viene vacío). */
+function licMedDateRange(rec) {
+  const d  = String(rec['D']  || '').trim();
+  const m  = String(rec['M']  || '').trim();
+  const aR = String(rec['A']  || '').trim();
+  if (!d || !m || !aR) return null;
+  const d2  = String(rec['D_2'] || d).trim();
+  const m2  = String(rec['M_2'] || m).trim();
+  const a2R = String(rec['A_2'] || aR).trim();
+  const yr  = aR.length  <= 2 ? 2000 + parseInt(aR,  10) : parseInt(aR,  10);
+  const yr2 = a2R.length <= 2 ? 2000 + parseInt(a2R, 10) : parseInt(a2R, 10);
+  const start = new Date(yr,  parseInt(m,  10) - 1, parseInt(d,  10));
+  if (isNaN(start.getTime())) return null;
+  const end = new Date(yr2, parseInt(m2, 10) - 1, parseInt(d2, 10));
+  return { start, end: isNaN(end.getTime()) ? start : end };
+}
+
+/* Rango de fechas de un registro LCGS a partir de Fecha de Inicio / Término. */
+function lcgsDateRange(rec) {
+  const start = parseDateDMY(String(rec['Fecha de Inicio'] || ''));
+  if (!start) return null;
+  const end = parseDateDMY(String(rec['Fecha de Termino'] || rec['Fecha de Término'] || '')) || start;
+  return { start, end };
+}
+
+function fmtDateShort(d) { return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`; }
 
 /* ═══════════════════════════════════════════════════════════
    RENDER PERSONA
@@ -494,15 +590,17 @@ function renderPerson(p) {
   for (const [sname, sheets] of Object.entries(p.fuentes)) {
     const st = Object.values(sheets).reduce((a, rr) => a + rr.length, 0);
     const displayName = srcDisplayName(sname);
-    const isFac = sname.includes('Facilidad');
+    const isFac    = sname.includes('Facilidad');
+    const isLicMed = isSrcLicMed(sname);
+    const isLCGS   = isSrcLCGS(sname);
 
     h += `<div class="fsec">
-      <div class="fhdr" onclick="toggleF(this)">
+      <button type="button" class="fhdr" onclick="toggleF(this)" aria-expanded="true">
         <div class="fdot" style="background:${srcColor(sname)}"></div>
         <div class="fnam">${esc(displayName)}</div>
         <div class="fcnt">${st} registro${st !== 1 ? 's' : ''}</div>
         <span class="chev">▾</span>
-      </div>
+      </button>
       <div class="fbody">`;
 
     for (const [shName, recs] of Object.entries(sheets)) {
@@ -530,13 +628,41 @@ function renderPerson(p) {
             const val  = rec[key];
             const vs   = String(val ?? '').trim();
             const isEmpty = !vs || vs === '.' || vs === '}' || /^\s+$/.test(vs);
-            const cal  = isEmpty ? null : renderMiniCal(vs, mesIdx);
+            const cal  = isEmpty ? null : renderMiniCal(vs, mesIdx, 'mc-amber');
             const chips = isEmpty ? '' : fmtFacilidad(vs);
             h += `<div class="mes-card ${isEmpty ? 'empty-mes' : ''}">
               <div class="mes-nom">${esc(mes)}</div>
               ${isEmpty ? '<div class="mes-val">—</div>' : (cal ? cal : `<div class="day-chips">${chips}</div>`)}
             </div>`;
           });
+          h += `</div>`;
+        });
+      } else if (isLicMed || isLCGS) {
+        const color = isLicMed ? 'mc-navy' : 'mc-teal';
+        recs.forEach((rec, ri) => {
+          const range = isLicMed ? licMedDateRange(rec) : lcgsDateRange(rec);
+          h += `<div class="range-cal-wrap">`;
+          if (recs.length > 1) h += `<div class="range-registro-sep">REGISTRO ${ri + 1}</div>`;
+
+          const infoFields = [];
+          if (isLicMed) {
+            const diag = String(rec['Diagnostico'] || '').trim();
+            if (diag) infoFields.push(['Diagnóstico', diag]);
+          } else {
+            const consec = String(rec['Consecutivo'] || '').trim();
+            if (consec) infoFields.push(['Consecutivo', consec]);
+            const turno = String(rec['Turno'] || '').trim();
+            if (turno) infoFields.push(['Turno', normTurno(turno)]);
+          }
+          const dias = guessDias(rec);
+          if (dias && dias !== '—') infoFields.push(['# Días', dias]);
+          if (range) infoFields.push(['Periodo', `${fmtDateShort(range.start)} – ${fmtDateShort(range.end)}`]);
+          if (infoFields.length) {
+            h += `<div class="range-info">${infoFields.map(([k, v]) =>
+              `<div class="range-info-field"><span class="range-info-key">${esc(k)}</span><span class="range-info-val">${esc(v)}</span></div>`
+            ).join('')}</div>`;
+          }
+          h += range ? renderRangeCal(range.start, range.end, color) : `<div class="empty-adv">Sin fecha de inicio registrada</div>`;
           h += `</div>`;
         });
       } else {
@@ -572,6 +698,7 @@ function renderPerson(p) {
 function toggleF(hdr) {
   hdr.classList.toggle('col');
   hdr.nextElementSibling.classList.toggle('hid');
+  hdr.setAttribute('aria-expanded', String(!hdr.classList.contains('col')));
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -878,7 +1005,7 @@ function facDias(row) {
   });
   return dias;
 }
-function isSrcLicMed(src) { const n=norm(src); return (n.includes('CONTROL')||n.includes('LICENCIA'))&&!n.includes('LCGS')&&!n.includes('GOCE')&&!n.includes('FACILIDAD'); }
+function isSrcLicMed(src) { const n=norm(src); return (n.includes('CONTROL')||n.includes('LICENCIA')||n.includes('MEDICA'))&&!n.includes('LCGS')&&!n.includes('GOCE')&&!n.includes('FACILIDAD'); }
 function isSrcLCGS(src)   { const n=norm(src); return n.includes('LCGS')||n.includes('GOCE'); }
 function isSrcFac(src)    { return norm(src).includes('FACILIDAD'); }
 
@@ -1180,6 +1307,7 @@ function svgHBars(data, total, limit=10) {
 let _advTab = 'facilidades';
 
 function openReporteFacilidadesAvanzado(tabInit = 'facilidades') {
+  setActiveModule(2);
   if (!DB) { alert('Espera a que cargue la base de datos.'); return; }
   _advTab = tabInit;
   const rp = document.getElementById('rp');
@@ -1998,6 +2126,7 @@ function buildPersonasSinNada(faltasResults) {
 let _faltasAnalysis = null;
 
 function openFaltasPanel() {
+  setActiveModule(1);
   if (!DB) { alert('Espera a que cargue la base de datos.'); return; }
   const rp = document.getElementById('rp');
   document.getElementById('em').style.display = 'none';
@@ -2815,6 +2944,7 @@ function runValesAnalysis() {
    MÓDULO VALES v2 — PANEL UI
 ═══════════════════════════════════════════════════════════ */
 function openValesPanel() {
+  setActiveModule(3);
   if (!DB) { alert('Espera a que cargue la base de datos.'); return; }
   _valesSelKey = null;
   const rp = document.getElementById('rp');
