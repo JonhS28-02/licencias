@@ -11,20 +11,24 @@
 
 <!-- ── HEADER ──────────────────────────────────────── -->
 <header>
-  <div class="logo">HM</div>
-  <div class="hdr-txt">
-    <h1>Sistema de Control de Licencias y Facilidades</h1>
-    <p>Hospital de la Mujer · Consulta y reportes administrativos</p>
+  <div class="brand">
+    <div class="logo">HM</div>
+    <div class="hdr-txt">
+      <h1>Sistema de Control de Licencias y Facilidades</h1>
+      <p>Hospital de la Mujer · Consulta y reportes administrativos</p>
+    </div>
   </div>
-  <div class="pills">
-    <div class="pill">Personas: <b id="sp">—</b></div>
-    <div class="pill">Registros: <b id="sr">—</b></div>
-    <div class="pill">Archivos: <b>4</b></div>
-    <button class="btn" onclick="openReporteFacilidadesAvanzado('facilidades')">📊 Reportes avanzados</button>
-    <button class="btn sec" onclick="openFaltasPanel()">📋 Analizar Faltas</button>
-    <button class="btn sec btn-vales" onclick="openValesPanel()">🎫 Vales</button>
+  <div class="hdr-stats">
+    <div class="pill">Personas <b id="sp">—</b></div>
+    <div class="pill">Registros <b id="sr">—</b></div>
+    <div class="pill">Archivos <b>4</b></div>
   </div>
 </header>
+<nav class="toolbar">
+  <button class="btn" onclick="openReporteFacilidadesAvanzado('facilidades')"><span class="btn-ico">📊</span> Reportes avanzados</button>
+  <button class="btn sec" onclick="openFaltasPanel()"><span class="btn-ico">📋</span> Analizar Faltas</button>
+  <button class="btn sec btn-vales" onclick="openValesPanel()"><span class="btn-ico">🎫</span> Vales</button>
+</nav>
 
 <!-- ── LAYOUT ──────────────────────────────────────── -->
 <div class="layout">
@@ -65,7 +69,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
 <script src="cs.js"></script>
+<script src="constancia.js"></script>
 </body>
 </html>
