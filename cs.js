@@ -126,14 +126,14 @@ function parseDayPart(part, mm, yr) {
    METADATOS DE FUENTE
 ═══════════════════════════════════════════════════════════ */
 function srcDisplayName(n) {
-  if (n.includes('Facilidad'))  return 'Facilidades Administrativas 2026';
-  if (n.includes('LCGS') || n.includes('2025')) return 'Licencias con Goce de Sueldo';
-  if (n.includes('2023') || n.includes('Control') || n.includes('Licencia')) return 'Licencias Médicas';
+  if (isSrcFac(n))    return 'Facilidades Administrativas 2026';
+  if (isSrcLCGS(n))   return 'Licencias con Goce de Sueldo';
+  if (isSrcLicMed(n)) return 'Licencias Médicas';
   return n;
 }
 function srcColor(n) {
-  if (n.includes('2023') || n.includes('Control')) return 'var(--acc)';
-  if (n.includes('LCGS') || n.includes('2025'))   return 'var(--acc2)';
+  if (isSrcLicMed(n)) return 'var(--acc)';
+  if (isSrcLCGS(n))   return 'var(--acc2)';
   return 'var(--amber)';
 }
 
@@ -590,7 +590,7 @@ function renderPerson(p) {
   for (const [sname, sheets] of Object.entries(p.fuentes)) {
     const st = Object.values(sheets).reduce((a, rr) => a + rr.length, 0);
     const displayName = srcDisplayName(sname);
-    const isFac    = sname.includes('Facilidad');
+    const isFac    = isSrcFac(sname);
     const isLicMed = isSrcLicMed(sname);
     const isLCGS   = isSrcLCGS(sname);
 
@@ -610,31 +610,37 @@ function renderPerson(p) {
       if (isFac) {
         const infoKeys = ['TARJETA','TURNO','ENTRADA','SALIDA','SERVICIO'];
         recs.forEach((rec, ri) => {
-          if (recs.length > 1) h += `<div style="padding:4px 12px;font-size:12px;color:var(--tx3);font-family:'IBM Plex Mono',monospace;background:var(--soft);border:1px solid var(--brd);border-bottom:none;border-top:${ri>0?'1px solid var(--brd)':'none'}">REGISTRO ${ri + 1}</div>`;
+          h += `<div class="range-cal-wrap">`;
+          if (recs.length > 1) h += `<div class="range-registro-sep">REGISTRO ${ri + 1}</div>`;
+
           const infoFields = infoKeys.filter(k => rec[k] !== undefined && rec[k] !== null && rec[k] !== '');
           if (infoFields.length) {
-            h += `<div class="fac-info">`;
-            infoFields.forEach(k => {
+            h += `<div class="range-info">${infoFields.map(k => {
               const vs = String(rec[k] ?? '').trim();
               const isTime = (k === 'ENTRADA' || k === 'SALIDA');
               const display = isTime ? (isExcelTime(vs) ? fmtTime(vs) : vs) : (isISODate(vs) ? fmtDate(vs) : vs);
-              h += `<div class="fac-field"><span class="fac-key">${esc(k)}</span><span class="fac-val${isTime?' time':''}">${esc(display)}</span></div>`;
-            });
-            h += `</div>`;
+              return `<div class="range-info-field"><span class="range-info-key">${esc(k)}</span><span class="range-info-val">${esc(display)}</span></div>`;
+            }).join('')}</div>`;
           }
-          h += `<div class="fac-grid">`;
-          MESES.forEach((mes, mesIdx) => {
-            const key  = `FACILIDADES ADMINISTRATIVAS ${mes} 2026`;
-            const val  = rec[key];
-            const vs   = String(val ?? '').trim();
+
+          // Solo los meses que sí tienen facilidad — calendario compacto,
+          // igual que Licencias Médicas / LCGS (sin las 12 tarjetas vacías).
+          const mesesConDatos = MESES.map((mes, mesIdx) => {
+            const vs = String(rec[`FACILIDADES ADMINISTRATIVAS ${mes} 2026`] ?? '').trim();
             const isEmpty = !vs || vs === '.' || vs === '}' || /^\s+$/.test(vs);
-            const cal  = isEmpty ? null : renderMiniCal(vs, mesIdx, 'mc-amber');
-            const chips = isEmpty ? '' : fmtFacilidad(vs);
-            h += `<div class="mes-card ${isEmpty ? 'empty-mes' : ''}">
-              <div class="mes-nom">${esc(mes)}</div>
-              ${isEmpty ? '<div class="mes-val">—</div>' : (cal ? cal : `<div class="day-chips">${chips}</div>`)}
-            </div>`;
-          });
+            return isEmpty ? null : { mes, mesIdx, vs };
+          }).filter(Boolean);
+
+          if (mesesConDatos.length) {
+            h += `<div class="range-cal-list">${mesesConDatos.map(({ mes, mesIdx, vs }) => {
+              const cal = renderMiniCal(vs, mesIdx, 'mc-amber');
+              const body = cal ? cal.replace('<div class="mini-cal">', `<div class="mini-cal"><div class="mini-cal-lbl">${esc(mes)} 2026</div>`)
+                                : `<div class="mini-cal"><div class="mini-cal-lbl">${esc(mes)} 2026</div><div class="day-chips">${fmtFacilidad(vs)}</div></div>`;
+              return body;
+            }).join('')}</div>`;
+          } else {
+            h += `<div class="empty-adv">Sin facilidades registradas en 2026</div>`;
+          }
           h += `</div>`;
         });
       } else if (isLicMed || isLCGS) {
