@@ -530,7 +530,11 @@ async function construirWorkbookConstancia(empleados, folioInicial, config) {
 ═══════════════════════════════════════════════════════════ */
 function buildConstanciaEmpleados() {
   if (!_faltasAnalysis) return [];
-  return _faltasAnalysis.results
+  // Si hay un filtro activo en el panel (búsqueda, servicio, turno o estado
+  // de faltas), la Constancia Global solo incluye a esas personas — no a
+  // todo el listado analizado.
+  const base = faltasFiltrosActivos() ? applyFiltrosFaltas(_faltasAnalysis.results) : _faltasAnalysis.results;
+  return base
     .filter(r => r.diasNoJustificados && r.diasNoJustificados.length)
     .map(r => ({
       nombreDisplay: (r.nombreDB && r.nombreDB !== '—') ? r.nombreDB : r.nombre,

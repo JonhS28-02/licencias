@@ -2009,11 +2009,12 @@ function openFaltasPanel() {
     <div class="adv-head">
       <div class="adv-title">
         <h2 id="faltasPanelTitulo">Análisis de Faltas — ${MESES_FAC[_faltasMes-1]} ${_faltasAnio}</h2>
-        <p>Sube el Excel de faltas. El sistema detecta el mes de la hoja y cruza con facilidades, LCGS y licencias médicas activas ese día.</p>
+        <p>Se carga automáticamente desde Google Sheets. El sistema detecta el mes del contenido y cruza con facilidades, LCGS y licencias médicas activas ese día.</p>
       </div>
       <div class="adv-actions">
         ${backBtn}
-        <button class="btn" onclick="document.getElementById('faltasFile').click()">📂 Subir Excel</button>
+        <button class="btn" onclick="cargarFaltasDesdeGoogleSheets()">🔄 Actualizar desde Google Sheets</button>
+        <button class="btn sec" onclick="document.getElementById('faltasFile').click()">📂 Subir Excel manual</button>
         <input type="file" id="faltasFile" accept=".xlsx" style="display:none" onchange="handleFaltasFile(this)">
       </div>
     </div>
@@ -2024,8 +2025,8 @@ function openFaltasPanel() {
     </div>
     <div id="faltasDropzone" class="faltas-drop" onclick="document.getElementById('faltasFile').click()">
       <div class="faltas-drop-ico">📋</div>
-      <div class="faltas-drop-txt">Haz clic o arrastra aquí el archivo Excel</div>
-      <div class="faltas-drop-sub">El mes se detecta automáticamente del contenido del archivo</div>
+      <div class="faltas-drop-txt">Haz clic o arrastra aquí el archivo Excel (opcional)</div>
+      <div class="faltas-drop-sub">Por defecto se toma directo de Google Sheets — esto es solo si quieres usar otro archivo</div>
     </div>
     <div id="faltasResult"></div>
   </div>`;
@@ -2039,6 +2040,9 @@ function openFaltasPanel() {
     const file = e.dataTransfer.files[0];
     if (file) processFaltasFile(file);
   });
+
+  // Carga automática desde Google Sheets al abrir el panel.
+  cargarFaltasDesdeGoogleSheets();
 }
 
 async function handleFaltasFile(input) {
@@ -2047,15 +2051,39 @@ async function handleFaltasFile(input) {
   input.value = '';
 }
 
+/* URL de exportación del Google Sheet que sustituye a la subida manual del
+   Excel de faltas. Debe estar compartido como "Cualquiera con el enlace
+   puede ver" para que el navegador pueda descargarlo directamente. */
+const FALTAS_GSHEET_ID  = '1v7PKYiurrs-wDcT0Iy2xwSOOH2WrMn3H0ZZYCHjEHCE';
+const FALTAS_GSHEET_URL = `https://docs.google.com/spreadsheets/d/${FALTAS_GSHEET_ID}/export?format=xlsx`;
+
+async function cargarFaltasDesdeGoogleSheets() {
+  const res = document.getElementById('faltasResult');
+  if (!res) return;
+  res.innerHTML = `<div class="empty-adv"><div class="spinner" style="margin:0 auto 8px"></div>Descargando faltas desde Google Sheets…</div>`;
+  try {
+    const resp = await fetch(FALTAS_GSHEET_URL);
+    if (!resp.ok) throw new Error(`No se pudo descargar (HTTP ${resp.status}). ¿El Sheet sigue compartido como "Cualquiera con el enlace puede ver"?`);
+    const data = await resp.arrayBuffer();
+    await processFaltasData(data, 'Faltas (Google Sheets)');
+  } catch (e) {
+    res.innerHTML = `<div class="empty-adv" style="color:#e05252">Error al descargar desde Google Sheets: ${esc(e.message)}<br><br>Puedes subir el Excel manualmente mientras tanto.</div>`;
+    console.error(e);
+  }
+}
+
 async function processFaltasFile(file) {
+  await processFaltasData(await file.arrayBuffer(), file.name);
+}
+
+async function processFaltasData(data, fileName) {
   const res = document.getElementById('faltasResult');
   if (!res) return;
   if (!window.XLSX) { res.innerHTML = `<div class="empty-adv" style="color:#e05252">SheetJS no cargó. Revisa la conexión a internet.</div>`; return; }
-  res.innerHTML = `<div class="empty-adv"><div class="spinner" style="margin:0 auto 8px"></div>Procesando ${esc(file.name)}…</div>`;
+  res.innerHTML = `<div class="empty-adv"><div class="spinner" style="margin:0 auto 8px"></div>Procesando ${esc(fileName)}…</div>`;
   _sinNadaCache = null; // reset cache for new file
   try {
-    const data = await file.arrayBuffer();
-    const wb   = XLSX.read(data, { type: 'array' });
+    const wb = XLSX.read(data, { type: 'array' });
 
     // Busca la primera hoja con datos reales que tenga encabezado
     // TARJETA/NOMBRE/FALTAS — igual que hace Python con los archivos
@@ -2090,7 +2118,7 @@ async function processFaltasFile(file) {
     if (tit) tit.textContent = `Análisis de Faltas — ${MESES_FAC[_faltasMes-1]} ${_faltasAnio}`;
 
     const analysis = analyzeFaltas(rows, header);
-    _faltasAnalysis = { ...analysis, rows, header, fileName: file.name };
+    _faltasAnalysis = { ...analysis, rows, header, fileName };
     renderFaltasResultado(analysis);
     showToast(`Análisis completado · ${analysis.results.length} personas · hoja "${sheetName}"`);
   } catch(e) {
@@ -2234,6 +2262,19 @@ function renderFaltasResultado(analysis) {
   refresh();
 }
 
+/* ¿Hay algún filtro del panel de Faltas realmente activo? Se usa para que
+   las descargas de Excel (corregidas, config para Python, Constancia Global)
+   solo saquen lo filtrado cuando el usuario de verdad activó un filtro —
+   si no hay ninguno, se sigue exportando el listado completo como antes. */
+function faltasFiltrosActivos() {
+  return !!(
+    document.getElementById('fServicio')?.value ||
+    document.getElementById('fTurno')?.value ||
+    document.getElementById('fTipo')?.value ||
+    (document.getElementById('fPersonaQ')?.value || '').trim()
+  );
+}
+
 function applyFiltrosFaltas(results) {
   const serv   = document.getElementById('fServicio')?.value  || '';
   const turno  = document.getElementById('fTurno')?.value     || '';
@@ -2334,21 +2375,29 @@ function renderFaltasTablas(analysis, sinNada) {
 function buildFaltasCorregidasRows() {
   const { results, rows, header } = _faltasAnalysis;
   const { tarjeta: cT, faltas: cF } = header.col;
-  const justMap = new Map(results.map(r => [r.tarjeta, new Set(r.diasJustificados)]));
-  const rfcMap  = new Map(results.map(r => [r.tarjeta, r.rfc]));
 
-  return rows.map((row, idx) => {
-    if (idx === header.headerRowIdx) return row ? [...row, 'R.F.C.'] : ['R.F.C.'];
-    if (!row || row[cT] == null) return row ? [...row] : [];
-    const tarjeta    = String(row[cT] ?? '').trim().replace(/^0+/, '') || '0';
-    const justified  = justMap.get(tarjeta);
+  // Si hay un filtro activo (búsqueda, servicio, turno o estado de faltas),
+  // el Excel solo saca a esas personas — no a todo el listado.
+  const base = faltasFiltrosActivos() ? applyFiltrosFaltas(results) : results;
+  const tarjetasIncluidas = faltasFiltrosActivos() ? new Set(base.map(r => r.tarjeta)) : null;
+  const justMap = new Map(base.map(r => [r.tarjeta, new Set(r.diasJustificados)]));
+  const rfcMap  = new Map(base.map(r => [r.tarjeta, r.rfc]));
+
+  const out = [];
+  rows.forEach((row, idx) => {
+    if (idx === header.headerRowIdx) { out.push(row ? [...row, 'R.F.C.'] : ['R.F.C.']); return; }
+    if (!row || row[cT] == null) { out.push(row ? [...row] : []); return; }
+    const tarjeta = String(row[cT] ?? '').trim().replace(/^0+/, '') || '0';
+    if (tarjetasIncluidas && !tarjetasIncluidas.has(tarjeta)) return; // fuera del filtro activo
+    const justified = justMap.get(tarjeta);
     const diasOrig   = parseFaltasDias(row[cF]);
     const diasLeft   = justified && justified.size ? diasOrig.filter(d => !justified.has(d)) : diasOrig;
     const newRow     = [...row];
     newRow[cF]       = diasLeft.length ? diasLeft.join(', ') : null;
     newRow.push(rfcMap.get(tarjeta) || '');
-    return newRow;
+    out.push(newRow);
   });
+  return out;
 }
 
 function faltasCorregidasFileName() {
