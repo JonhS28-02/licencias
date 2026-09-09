@@ -45,10 +45,14 @@ async function handleConstanciaBaseCodigoFile(input) {
   const file = input.files[0];
   const estado = document.getElementById('constanciaBaseCodigoEstado');
   if (!file || !estado) return;
+  const isCurrent = beginImport(estado);
+  _constanciaBaseCodigo = null;
+  _constanciaBaseAmbiguos = new Set();
   if (!window.XLSX) { showToast('SheetJS no cargó', 'err'); return; }
   try {
-    const buf = await file.arrayBuffer();
-    const wb  = XLSX.read(buf, { type: 'array' });
+    const buf = await readExcelFile(file);
+    const wb = await readWorkbook(buf, { type: 'array' });
+    if (!isCurrent()) return;
     const sheetName = wb.SheetNames.find(n => n.toUpperCase() === 'HORARIOS') || wb.SheetNames[0];
     const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, defval: null });
 
@@ -87,6 +91,7 @@ async function handleConstanciaBaseCodigoFile(input) {
     estado.style.color = 'var(--acc2)';
     showToast('Base de código de puesto cargada');
   } catch (e) {
+    if (!isCurrent()) return;
     estado.textContent = 'Error al leer el archivo';
     estado.style.color = 'var(--danger)';
     console.error(e);
@@ -549,9 +554,9 @@ async function generarConstanciaGlobalXLSX() {
   if (!window.ExcelJS) { showToast('ExcelJS no cargó. Revisa la conexión a internet.', 'err'); return; }
   if (!window.JSZip)   { showToast('JSZip no cargó. Revisa la conexión a internet.', 'err'); return; }
 
-  const qnaNum   = parseInt(document.getElementById('cQnaNum')?.value, 10);
-  const folioIni = parseInt(document.getElementById('cFolioInicial')?.value, 10);
-  if (!qnaNum || !folioIni) { showToast('Falta el número de quincena o el folio inicial', 'err'); return; }
+  const qnaNum   = Number(document.getElementById('cQnaNum')?.value);
+  const folioIni = Number(document.getElementById('cFolioInicial')?.value);
+  if (!Number.isInteger(qnaNum) || qnaNum < 1 || qnaNum > 24 || !Number.isSafeInteger(folioIni) || folioIni < 1) { showToast('Falta el número de quincena o el folio inicial', 'err'); return; }
 
   const quincena     = parseInt(document.getElementById('cQuincena')?.value, 10) || 2;
   const noDocumento  = parseInt(document.getElementById('cNoDocumento')?.value, 10) || 8001;
@@ -574,7 +579,7 @@ async function generarConstanciaGlobalXLSX() {
     const a    = document.createElement('a');
     a.href = url; a.download = `CONSTANCIA_GLOBAL_QNA${qnaNum}.xlsx`;
     document.body.appendChild(a); a.click(); a.remove();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
 
     showToast(`Constancia generada · ${empleados.length} personas · folios ${folioIni}–${folioFinal} · ${nHojas} hoja(s)`);
     if (noEncontrados.length) {

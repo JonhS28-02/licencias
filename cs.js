@@ -7,10 +7,10 @@
 let DB = null, hist = [], cur = null, acItems = [], acIdx = -1;
 let _eventosCache = null;
 let _sinNadaCache = null;
-let _tarjetaRFCMap = null;   // Map tarjetaKey → rfc  (índice inverso para búsqueda)
-// Faltas — mes/año dinámico (por defecto Mayo 2026)
-let _faltasMes  = 5;
-let _faltasAnio = 2026;
+let _tarjetaRFCMap = null;   // Map tarjetaKey → Set de RFC (índice inverso para búsqueda)
+// Periodo inicial: mes actual; el archivo puede indicar otro periodo.
+let _faltasMes = new Date().getMonth() + 1;
+let _faltasAnio = new Date().getFullYear();
 // Vales — lista de nombres desde Excel
 let _valesNombresFilter  = null;   // Set de tarjetaKeys, null = todos
 let _valesNombresNoMatch = [];
@@ -38,9 +38,11 @@ function resetWorkspace() {
 
 /* Toast notifications */
 function showToast(msg, type = 'ok') {
+  document.querySelectorAll('.toast').forEach(toast => toast.remove());
   const el = document.createElement('div');
   el.className = `toast toast-${type}`;
   el.textContent = msg;
+  el.setAttribute('role', type === 'err' ? 'alert' : 'status');
   document.body.appendChild(el);
   requestAnimationFrame(() => el.classList.add('visible'));
   setTimeout(() => { el.classList.remove('visible'); setTimeout(() => el.remove(), 380); }, 2800);
@@ -50,16 +52,15 @@ function showToast(msg, type = 'ok') {
    UTILIDADES GENERALES
 ═══════════════════════════════════════════════════════════ */
 function esc(s) {
-  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 function pad(d) { return String(parseInt(d, 10)).padStart(2, '0'); }
 function isExcelTime(s) { return typeof s === 'string' && s.startsWith('1899-12-30T'); }
 function isISODate(s)   { return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(s) && !s.startsWith('1899'); }
 
 function fmtTime(s) {
-  const d = new Date(s);
-  if (isNaN(d)) return s;
-  return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  const match = String(s).match(/T(\d{2}):(\d{2})/);
+  return match ? `${match[1]}:${match[2]}` : String(s);
 }
 function fmtDate(s) {
   const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -126,7 +127,7 @@ function parseDayPart(part, mm, yr) {
    METADATOS DE FUENTE
 ═══════════════════════════════════════════════════════════ */
 function srcDisplayName(n) {
-  if (isSrcFac(n))    return 'Facilidades Administrativas 2026';
+  if (isSrcFac(n))    return 'Facilidades Administrativas';
   if (isSrcLCGS(n))   return 'Licencias con Goce de Sueldo';
   if (isSrcLicMed(n)) return 'Licencias Médicas';
   return n;
@@ -141,10 +142,13 @@ function srcColor(n) {
    CARGA DE DATOS
 ═══════════════════════════════════════════════════════════ */
 async function loadData() {
+  setDataStatus('Cargando información…');
   try {
-    const r = await fetch('./data.json?t=' + Date.now());
+    const r = await fetch('./data.json', { cache: 'no-store' });
     if (!r.ok) throw new Error('No se pudo cargar data.json');
-    DB = await r.json();
+    DB = validateDatabase(await r.json());
+    _tarjetaMap = null;
+    _sinNadaCache = null;
     _eventosCache = null;
     let tr = 0;
     Object.values(DB).forEach(p => Object.values(p.fuentes).forEach(s => Object.values(s).forEach(rr => tr += rr.length)));
@@ -162,14 +166,17 @@ async function loadData() {
             const t = guessTarjeta(rec);
             if (t && t !== '—') {
               const tk = String(t).trim().replace(/^0+/, '') || '0';
-              if (!_tarjetaRFCMap.has(tk)) _tarjetaRFCMap.set(tk, rfc);
+              if (!_tarjetaRFCMap.has(tk)) _tarjetaRFCMap.set(tk, new Set());
+              _tarjetaRFCMap.get(tk).add(rfc);
             }
           }
     }
     setupSearch();
+    setDataStatus('Información cargada', true);
   } catch(e) {
-    document.getElementById('ld').innerHTML = `<span style="color:#e05252;font-size:14px">Error: ${e.message}</span>`;
-    console.error(e);
+    DB = null;
+    setDataStatus('Información no disponible');
+    document.getElementById('ld').textContent = 'No se pudo cargar la base. Comprueba data.json y recarga la página.';
   }
 }
 
@@ -207,13 +214,13 @@ function setupSearch() {
       const tarjetaBadge = p._matchTarjeta
         ? `<span class="aci-tarjeta">🪪 ${hl(p._matchTarjeta, q.replace(/^0+/,''))}</span>`
         : '';
-      return `<div class="aci" role="option" data-rfc="${esc(p.rfc)}" data-i="${i}">
+      return `<div class="aci" role="option" id="ac-option-${i}" aria-selected="false" data-rfc="${esc(p.rfc)}" data-i="${i}">
         <div class="aci-rfc-row">
           <span class="aci-rfc">${hl(p.rfc, q)}</span>
           ${tarjetaBadge}
         </div>
         <div class="aci-nom">${hl(fmtNombre(p.nombre) || '(sin nombre)', q)}</div>
-        <div class="aci-tags">${Object.keys(p.fuentes).map(s => `<span class="tag">${srcDisplayName(s).split(' ')[0]}</span>`).join('')}</div>
+        <div class="aci-tags">${Object.keys(p.fuentes).map(s => `<span class="tag">${esc(srcDisplayName(s).split(' ')[0])}</span>`).join('')}</div>
       </div>`;
     }).join('');
     // Pie con total de resultados
@@ -228,8 +235,8 @@ function setupSearch() {
   inp.addEventListener('keydown', e => {
     if (!acItems.length) return;
     const els = ac.querySelectorAll('.aci');
-    if (e.key === 'ArrowDown') { e.preventDefault(); acIdx = Math.min(acIdx + 1, els.length - 1); els.forEach((el, i) => el.classList.toggle('act', i === acIdx)); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); acIdx = Math.max(acIdx - 1, -1); els.forEach((el, i) => el.classList.toggle('act', i === acIdx)); }
+    if (e.key === 'ArrowDown') { e.preventDefault(); acIdx = Math.min(acIdx + 1, els.length - 1); els.forEach((el, i) => { el.classList.toggle('act', i === acIdx); el.setAttribute('aria-selected', String(i === acIdx)); }); if (acIdx >= 0) inp.setAttribute('aria-activedescendant', `ac-option-${acIdx}`); else inp.removeAttribute('aria-activedescendant'); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); acIdx = Math.max(acIdx - 1, -1); els.forEach((el, i) => { el.classList.toggle('act', i === acIdx); el.setAttribute('aria-selected', String(i === acIdx)); }); if (acIdx >= 0) inp.setAttribute('aria-activedescendant', `ac-option-${acIdx}`); else inp.removeAttribute('aria-activedescendant'); }
     else if (e.key === 'Enter') { e.preventDefault(); const t = acIdx >= 0 ? acItems[acIdx] : acItems[0]; if(t) { pick(t.rfc); inp.value = ''; sc.style.display = 'none'; } }
     else if (e.key === 'Escape') hideAC();
   });
@@ -255,44 +262,25 @@ function setupSearch() {
 function hideAC() {
   document.getElementById('ac').style.display = 'none';
   document.getElementById('si')?.setAttribute('aria-expanded', 'false');
+  document.getElementById('si')?.removeAttribute('aria-activedescendant');
   acItems = []; acIdx = -1;
 }
 
 function searchDB(q, lim) {
-  const res  = [];
-  const seen = new Set();
-
-  // Búsqueda por tarjeta (si la query tiene dígitos)
-  if (_tarjetaRFCMap && /^\d+/.test(q)) {
-    const qNum = q.replace(/^0+/, '') || '0';
-    for (const [tk, rfc] of _tarjetaRFCMap.entries()) {
-      if (res.length >= lim) break;
-      if ((tk === qNum || tk.startsWith(qNum)) && !seen.has(rfc)) {
-        const d = DB[rfc]; if (!d) continue;
-        seen.add(rfc);
-        // Adjuntar la tarjeta para mostrar en autocomplete
-        res.push({ ...d, _matchTarjeta: tk });
-      }
+  if (!DB) return [];
+  const query = norm(q), number = query.replace(/^0+/, '') || '0';
+  const cards = new Map();
+  if (/^\d+$/.test(query)) {
+    for (const [card, rfcs] of _tarjetaRFCMap || []) {
+      if (card.startsWith(number)) for (const rfc of rfcs) cards.set(rfc, card);
     }
   }
-
-  // Búsqueda por RFC y nombre
-  for (const [rfc, d] of Object.entries(DB)) {
-    if (res.length >= lim) break;
-    if (seen.has(rfc)) continue;
-    if (rfc.includes(q) || (d.nombre && d.nombre.toUpperCase().includes(q))) {
-      seen.add(rfc);
-      res.push(d);
-    }
-  }
-
-  // Priorizar coincidencias exactas al inicio
-  res.sort((a, b) => {
-    const aExact = a.rfc.startsWith(q) || (a._matchTarjeta && (a._matchTarjeta === q.replace(/^0+/,''))) ? 0 : 1;
-    const bExact = b.rfc.startsWith(q) || (b._matchTarjeta && (b._matchTarjeta === q.replace(/^0+/,''))) ? 0 : 1;
-    return aExact - bExact;
-  });
-  return res.slice(0, lim);
+  return Object.values(DB).filter(p => cards.has(p.rfc) || norm(p.rfc).includes(query) || norm(p.nombre).includes(query))
+    .map(p => ({ ...p, _matchTarjeta: cards.get(p.rfc) }))
+    .sort((a, b) => {
+      const rank = p => norm(p.rfc) === query || p._matchTarjeta === number ? 0 : norm(p.rfc).startsWith(query) ? 1 : 2;
+      return rank(a) - rank(b) || a.nombre.localeCompare(b.nombre, 'es');
+    }).slice(0, lim);
 }
 
 function hl(t, q) {
@@ -306,7 +294,7 @@ function hl(t, q) {
 ═══════════════════════════════════════════════════════════ */
 function pick(rfc) {
   hideAC();
-  const p = DB[rfc]; if (!p) return;
+  const p = DB?.[rfc]; if (!p) return;
   cur = rfc;
   const ei = hist.indexOf(rfc); if (ei !== -1) hist.splice(ei, 1);
   hist.unshift(rfc); if (hist.length > 25) hist.pop();
@@ -319,7 +307,7 @@ function renderSide() {
   document.getElementById('rl').innerHTML = hist.map(r => {
     const p = DB[r]; if (!p) return '';
     const dots = Object.keys(p.fuentes).map(s => `<div class="rdot" style="background:${srcColor(s)}"></div>`).join('');
-    return `<button type="button" class="ri ${r === cur ? 'act' : ''}" onclick="pick('${esc(r)}')" aria-label="Abrir expediente de ${esc(fmtNombre(p.nombre) || r)}">
+    return `<button type="button" class="ri ${r === cur ? 'act' : ''}" data-person="${esc(r)}" aria-label="Abrir expediente de ${esc(fmtNombre(p.nombre) || r)}">
       <span class="ri-rfc">${esc(r)}</span>
       <span class="ri-nom">${esc(fmtNombre(p.nombre) || '—')}</span>
       <div class="ri-dots">${dots}</div>
@@ -385,12 +373,12 @@ function getRecentActivity(p) {
           const d=String(rec['D']||'').trim(), m2=String(rec['M']||'').trim(), aR=String(rec['A']||'').trim();
           if (!d||!m2||!aR) continue;
           const yr = aR.length<=2 ? 2000+parseInt(aR,10) : parseInt(aR,10);
-          const start = new Date(yr, parseInt(m2,10)-1, parseInt(d,10));
-          if (isNaN(start.getTime())) continue;
+          const start = validDate(yr, m2, d);
+          if (!start) continue;
           const d2=String(rec['D_2']||d).trim(), m2b=String(rec['M_2']||m2).trim(), a2R=String(rec['A_2']||aR).trim();
           const yr2 = a2R.length<=2 ? 2000+parseInt(a2R,10) : parseInt(a2R,10);
-          const end  = new Date(yr2, parseInt(m2b,10)-1, parseInt(d2,10));
-          if (start <= mEnd && end >= mStart) {
+          const end = validDate(yr2, m2b, d2);
+          if (end && start <= mEnd && end >= mStart) {
             const diag = String(rec['Diagnostico']||'').trim();
             alerts.push({ tipo:'LIC.MED.', label, esCurr, icon:'🏥', color:'navy',
               detalle: diag ? diag.slice(0,50)+(diag.length>50?'…':'') : `${d}/${m2}/${yr} – ${d2}/${m2b}/${yr2}` });
@@ -425,8 +413,8 @@ function computePersonStats(p) {
           const t=guessTarjeta(rec); if(t&&t!=='—') tarjeta=t;
           const sv=String(rec['SERVICIO']||'').trim(); if(sv) servicio=sv;
           const tu=normTurno(String(rec['TURNO']||'').trim()); if(tu&&tu!=='—') turno=tu;
-          for (const mes of MESES_FAC) {
-            const v=rec[`FACILIDADES ADMINISTRATIVAS ${mes} 2026`];
+          for (const key of Object.keys(rec).filter(k => advParseMonthField(k))) {
+            const v=rec[key];
             if(v&&String(v).trim()&&String(v).trim()!=='.') facCount+=expandFac(v).length;
           }
         }
@@ -436,8 +424,8 @@ function computePersonStats(p) {
   return {licDias,licCount,lcgsDias,lcgsCount,facCount,tarjeta,servicio,turno};
 }
 
-function renderMiniCal(facValue, mesIdx, colorClass='mc-navy') {
-  const year=2026, daysInMonth=new Date(year,mesIdx+1,0).getDate();
+function renderMiniCal(facValue, mesIdx, colorClass='mc-navy', year = new Date().getFullYear()) {
+  const daysInMonth=new Date(year,mesIdx+1,0).getDate();
   const firstDow=(new Date(year,mesIdx,1).getDay()+6)%7; // Mon=0
   const highlighted=new Set(), rangeSet=new Set();
   for(const d of expandFac(facValue)){
@@ -445,7 +433,7 @@ function renderMiniCal(facValue, mesIdx, colorClass='mc-navy') {
     if(parts.length<3||parts[1]!==pad(mesIdx+1)||parts[2]!==String(year)) continue;
     if(parts[0].includes('-')){
       const[s,e]=parts[0].split('-').map(x=>parseInt(x,10));
-      for(let i=s;i<=e;i++){highlighted.add(i);rangeSet.add(i);}
+      for(let i=Math.max(1,s);i<=Math.min(daysInMonth,e);i++){highlighted.add(i);rangeSet.add(i);}
     } else { highlighted.add(parseInt(parts[0],10)); }
   }
   if(!highlighted.size) return null;
@@ -508,10 +496,9 @@ function licMedDateRange(rec) {
   const a2R = String(rec['A_2'] || aR).trim();
   const yr  = aR.length  <= 2 ? 2000 + parseInt(aR,  10) : parseInt(aR,  10);
   const yr2 = a2R.length <= 2 ? 2000 + parseInt(a2R, 10) : parseInt(a2R, 10);
-  const start = new Date(yr,  parseInt(m,  10) - 1, parseInt(d,  10));
-  if (isNaN(start.getTime())) return null;
-  const end = new Date(yr2, parseInt(m2, 10) - 1, parseInt(d2, 10));
-  return { start, end: isNaN(end.getTime()) ? start : end };
+  const start = validDate(yr, m, d);
+  const end = validDate(yr2, m2, d2);
+  return start && end && end >= start ? { start, end } : null;
 }
 
 /* Rango de fechas de un registro LCGS a partir de Fecha de Inicio / Término. */
@@ -545,15 +532,15 @@ function renderPerson(p) {
       <div class="tot-n">${totalR}</div>
       <div class="tot-l">registros totales</div>
       <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;justify-content:flex-end">
-        <button class="btn" onclick="genPDF()">⬇ PDF</button>
-        <button class="btn sec" onclick="navigator.clipboard.writeText('${esc(p.rfc)}').then(()=>showToast('RFC copiado'))" title="Copiar RFC">⎘ RFC</button>
+        <button class="btn" data-click="genPDF">⬇ PDF</button>
+        <button class="btn sec" data-copy-rfc="${esc(p.rfc)}" title="Copiar RFC">⎘ RFC</button>
       </div>
     </div>
   </div>
   <div class="stats-bar">
     <div class="stat-pill stat-navy"><span class="stat-num">${stats.licCount}</span><span class="stat-lbl">Licencias</span>${stats.licDias>0?`<span class="stat-sub">${stats.licDias} días</span>`:''}</div>
     <div class="stat-pill stat-teal"><span class="stat-num">${stats.lcgsCount}</span><span class="stat-lbl">LCGS</span>${stats.lcgsDias>0?`<span class="stat-sub">${stats.lcgsDias} días</span>`:''}</div>
-    <div class="stat-pill stat-amber"><span class="stat-num">${stats.facCount}</span><span class="stat-lbl">Facilidades 2026</span><span class="stat-sub">días individuales</span></div>
+    <div class="stat-pill stat-amber"><span class="stat-num">${stats.facCount}</span><span class="stat-lbl">Facilidades</span><span class="stat-sub">entradas registradas</span></div>
   </div>
   ${(() => {
     const acts = getRecentActivity(p);
@@ -595,7 +582,7 @@ function renderPerson(p) {
     const isLCGS   = isSrcLCGS(sname);
 
     h += `<div class="fsec">
-      <button type="button" class="fhdr" onclick="toggleF(this)" aria-expanded="true">
+      <button type="button" class="fhdr" data-click="toggleF" aria-expanded="true">
         <div class="fdot" style="background:${srcColor(sname)}"></div>
         <div class="fnam">${esc(displayName)}</div>
         <div class="fcnt">${st} registro${st !== 1 ? 's' : ''}</div>
@@ -625,21 +612,21 @@ function renderPerson(p) {
 
           // Solo los meses que sí tienen facilidad — calendario compacto,
           // igual que Licencias Médicas / LCGS (sin las 12 tarjetas vacías).
-          const mesesConDatos = MESES.map((mes, mesIdx) => {
-            const vs = String(rec[`FACILIDADES ADMINISTRATIVAS ${mes} 2026`] ?? '').trim();
-            const isEmpty = !vs || vs === '.' || vs === '}' || /^\s+$/.test(vs);
-            return isEmpty ? null : { mes, mesIdx, vs };
-          }).filter(Boolean);
+          const mesesConDatos = Object.entries(rec).flatMap(([key, value]) => {
+            const meta = advParseMonthField(key);
+            const vs = String(value ?? '').trim();
+            return !meta || !vs || vs === '.' || vs === '}' ? [] : [{ mes: meta.mes, mesIdx: meta.mesIndex, year: meta.anio, vs }];
+          });
 
           if (mesesConDatos.length) {
-            h += `<div class="range-cal-list">${mesesConDatos.map(({ mes, mesIdx, vs }) => {
-              const cal = renderMiniCal(vs, mesIdx, 'mc-amber');
-              const body = cal ? cal.replace('<div class="mini-cal">', `<div class="mini-cal"><div class="mini-cal-lbl">${esc(mes)} 2026</div>`)
-                                : `<div class="mini-cal"><div class="mini-cal-lbl">${esc(mes)} 2026</div><div class="day-chips">${fmtFacilidad(vs)}</div></div>`;
+            h += `<div class="range-cal-list">${mesesConDatos.map(({ mes, mesIdx, year, vs }) => {
+              const cal = renderMiniCal(vs, mesIdx, 'mc-amber', year);
+              const body = cal ? cal.replace('<div class="mini-cal">', `<div class="mini-cal"><div class="mini-cal-lbl">${esc(mes)} ${year}</div>`)
+                                : `<div class="mini-cal"><div class="mini-cal-lbl">${esc(mes)} ${year}</div><div class="day-chips">${fmtFacilidad(vs)}</div></div>`;
               return body;
             }).join('')}</div>`;
           } else {
-            h += `<div class="empty-adv">Sin facilidades registradas en 2026</div>`;
+            h += `<div class="empty-adv">Sin facilidades registradas</div>`;
           }
           h += `</div>`;
         });
@@ -1006,7 +993,7 @@ function expandFac(v) {
 function facDias(row) {
   const dias = [];
   MESES_FAC.forEach(mes => {
-    const key = Object.keys(row||{}).find(k => { const nk=norm(k); return nk.includes('FACILIDADES ADMINISTRATIVAS') && nk.includes(mes) && nk.includes('2026'); });
+    const key = Object.keys(row||{}).find(k => { const nk=norm(k); return nk.includes('FACILIDADES ADMINISTRATIVAS') && nk.includes(mes); });
     if (key) expandFac(row[key]).forEach(d => dias.push(`${mes}: ${d}`));
   });
   return dias;
@@ -1334,7 +1321,7 @@ function openReporteFacilidadesAvanzado(tabInit = 'facilidades') {
   const aniosLcgs= [...new Set(lcgsAll.map(e=>e.anio))].filter(a=>a!=='—').sort().map(y=>({value:y,label:y}));
   const turnosLcgs=[...new Set(lcgsAll.map(e=>e.turno))].filter(t=>t!=='—').sort().map(t=>({value:t,label:t}));
 
-  const backBtn = cur ? `<button class="btn sec" onclick="pick('${esc(cur)}')">← Volver a persona</button>` : '';
+  const backBtn = cur ? `<button class="btn sec" data-person="${esc(cur)}">← Volver a persona</button>` : '';
 
   rp.innerHTML = `<div class="adv-wrap">
     <div class="adv-head">
@@ -1344,19 +1331,19 @@ function openReporteFacilidadesAvanzado(tabInit = 'facilidades') {
       </div>
       <div class="adv-actions">
         ${backBtn}
-        <button class="btn" id="btnPdfAdv" onclick="genPDFAvanzado()">⬇ PDF filtrado</button>
-        <button class="btn sec" id="btnCsvAdv" onclick="exportCSV()">CSV</button>
+        <button class="btn" id="btnPdfAdv" data-click="genPDFAvanzado">⬇ PDF filtrado</button>
+        <button class="btn sec" id="btnCsvAdv" data-click="exportCSV">CSV</button>
       </div>
     </div>
 
     <div class="adv-tabs">
-      <button class="adv-tab ${_advTab==='facilidades'?'act':''}" onclick="switchAdvTab('facilidades')">
+      <button class="adv-tab ${_advTab==='facilidades'?'act':''}" data-tab="facilidades" data-click="switchAdvTab">
         <span class="adv-tab-dot" style="background:var(--amber)"></span>Facilidades Administrativas
       </button>
-      <button class="adv-tab ${_advTab==='licencias'?'act':''}" onclick="switchAdvTab('licencias')">
+      <button class="adv-tab ${_advTab==='licencias'?'act':''}" data-tab="licencias" data-click="showLicenciasTab">
         <span class="adv-tab-dot" style="background:var(--acc)"></span>Licencias Médicas
       </button>
-      <button class="adv-tab ${_advTab==='lcgs'?'act':''}" onclick="switchAdvTab('lcgs')">
+      <button class="adv-tab ${_advTab==='lcgs'?'act':''}" data-tab="lcgs" data-click="showLCGSTab">
         <span class="adv-tab-dot" style="background:var(--acc2)"></span>Licencias con Goce de Sueldo
       </button>
     </div>
@@ -1431,7 +1418,7 @@ function switchAdvTab(tab) {
   _advTab = tab;
   document.querySelectorAll('.adv-tab').forEach(b => b.classList.remove('act'));
   document.querySelectorAll('.adv-tab-pane').forEach(p => p.classList.add('hidden'));
-  const btn = document.querySelector(`.adv-tab[onclick="switchAdvTab('${tab}')"]`);
+  const btn = document.querySelector(`.adv-tab[data-tab="${tab}"]`);
   if (btn) btn.classList.add('act');
   const pane = document.getElementById(`tab-${tab}`);
   if (pane) pane.classList.remove('hidden');
@@ -1762,15 +1749,17 @@ function genPDFLCGS() {
    EXPORT CSV
 ═══════════════════════════════════════════════════════════ */
 function csvBlob(headers, rows) {
-  const csv = [headers.join(',')].concat(rows.map(r => r.map(v => '"'+String(v??'').replace(/"/g,'""')+'"').join(','))).join('\n');
+  const csv = [headers.map(csvCell).join(',')].concat(rows.map(r => r.map(csvCell).join(','))).join('\r\n');
   return new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'});
 }
 function download(blob, name) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = name;
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(a.href);
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
 function exportCSV() {
@@ -1799,13 +1788,11 @@ function exportCSVLCGS() {
    ANÁLISIS DE FALTAS — HELPERS DE FECHAS
 ═══════════════════════════════════════════════════════════ */
 function parseDateDMY(s) {
-  if (!s) return null;
-  const str = String(s).trim();
-  const parts = str.split('/');
-  if (parts.length !== 3) return null;
-  const d = parseInt(parts[0], 10), m = parseInt(parts[1], 10), y = parseInt(parts[2], 10);
-  if (isNaN(d) || isNaN(m) || isNaN(y) || y < 1900) return null;
-  return new Date(y, m - 1, d);
+  const text = String(s ?? '').trim();
+  const iso = text.match(/^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/);
+  if (iso) return validDate(iso[1], iso[2], iso[3]);
+  const dmy = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  return dmy ? validDate(dmy[3], dmy[2], dmy[1]) : null;
 }
 
 function isMayoDayInFacilidad(facValue, dayNum) {
@@ -1831,25 +1818,14 @@ function lcgsCoversMayoDay(rec, dayNum) {
   const start = parseDateDMY(fi);
   if (!start) return false;
   const end = parseDateDMY(ft) || start;
-  const target = new Date(_faltasAnio, _faltasMes - 1, dayNum);
-  return start <= target && target <= end;
+  const target = validDate(_faltasAnio, _faltasMes, dayNum);
+  return !!(target && start <= target && target <= end);
 }
 
 function licMedCoversMayoDay(rec, dayNum) {
-  const d  = String(rec['D']  || '').trim();
-  const m  = String(rec['M']  || '').trim();
-  const aR = String(rec['A']  || '').trim();
-  const d2 = String(rec['D_2'] || d).trim();
-  const m2 = String(rec['M_2'] || m).trim();
-  const a2R= String(rec['A_2'] || aR).trim();
-  if (!d || !m || !aR) return false;
-  const yr  = aR.length  <= 2 ? 2000 + parseInt(aR,  10) : parseInt(aR,  10);
-  const yr2 = a2R.length <= 2 ? 2000 + parseInt(a2R, 10) : parseInt(a2R, 10);
-  const start  = new Date(yr,  parseInt(m,  10) - 1, parseInt(d,  10));
-  const end    = new Date(yr2, parseInt(m2, 10) - 1, parseInt(d2, 10));
-  if (isNaN(start.getTime())) return false;
-  const target = new Date(_faltasAnio, _faltasMes - 1, dayNum);
-  return start <= target && target <= end;
+  const range = licMedDateRange(rec);
+  const target = validDate(_faltasAnio, _faltasMes, dayNum);
+  return !!(range && target && range.start <= target && target <= range.end);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1867,6 +1843,7 @@ function buildTarjetaMap() {
           if (t && t !== '—') {
             const key = String(t).trim().replace(/^0+/, '') || '0';
             if (!_tarjetaMap.has(key)) _tarjetaMap.set(key, {rfc, persona});
+            else if (_tarjetaMap.get(key)?.rfc !== rfc) _tarjetaMap.set(key, null);
           }
         }
       }
@@ -1879,38 +1856,25 @@ function buildTarjetaMap() {
    ANÁLISIS DE FALTAS — CORE
 ═══════════════════════════════════════════════════════════ */
 function parseFaltasDias(raw) {
-  const s = String(raw ?? '').trim();
-  if (!s) return [];
+  const text = String(raw ?? '').trim();
+  if (!text) return [];
   const days = new Set();
-
-  // Dividir por comas primero
-  for (const token of s.split(/\s*,\s*/)) {
-    const t = token.trim();
-    if (!t) continue;
-
-    if (t.includes('/')) {
-      // Notación de rango con diagonal: "10/11" = días 10 y 11 (rango inclusivo)
-      // Puede venir como "10/11" (2 días) o incluso "10/11/12" (3 días)
-      const parts = t.split('/').map(p => parseInt(p.trim(), 10)).filter(n => !isNaN(n) && n >= 1 && n <= 31);
-      if (parts.length >= 2) {
-        const min = Math.min(...parts), max = Math.max(...parts);
-        for (let d = min; d <= max; d++) days.add(d);
-      } else if (parts.length === 1) {
-        days.add(parts[0]);
-      }
-    } else {
-      // Número simple o separado por espacios: "5" o "1 2"
-      for (const piece of t.split(/\s+/)) {
-        const n = parseInt(piece, 10);
-        if (!isNaN(n) && n >= 1 && n <= 31) days.add(n);
-      }
-    }
+  for (const token of text.split(/[,;\s]+/).filter(Boolean)) {
+    if (!/^\d{1,2}(?:[-/]\d{1,2})*$/.test(token)) throw new Error('Formato de faltas inválido: usa días de 1 a 31, comas o rangos.');
+    const values = token.split(/[-/]/).map(Number);
+    if (values.some(d => d < 1 || d > 31)) throw new Error('Las faltas contienen un día fuera de 1 a 31.');
+    if (values.length > 1) {
+      // Se conserva la convención del listado: 10/12 representa el rango 10–12.
+      const first = values[0], last = values[values.length - 1];
+      if (last < first) throw new Error('El rango de faltas está invertido.');
+      for (let d = first; d <= last; d++) days.add(d);
+    } else days.add(values[0]);
   }
-
   return [...days].sort((a, b) => a - b);
 }
 
 function checkCoberturaFalta(persona, diaNum) {
+  if (!validDate(_faltasAnio, _faltasMes, diaNum)) return null;
   for (const [src, sheets] of Object.entries(persona.fuentes || {})) {
     for (const recs of Object.values(sheets || {})) {
       for (const rec of (recs || [])) {
@@ -2046,7 +2010,8 @@ function analyzeFaltas(rows, header) {
   const results    = [];
   const notFound   = [];
   const { tarjeta: cT, nombre: cN, faltas: cF } = header.col;
-  const dataRows   = rows.slice(header.headerRowIdx + 1).filter(r => r && r[cT] != null && String(r[cT]).trim());
+  const dataRows = rows.slice(header.headerRowIdx + 1).filter(r => r && r[cT] != null && String(r[cT]).trim());
+  const seenCards = new Set();
 
   for (const row of dataRows) {
     const tarjetaRaw = String(row[cT] ?? '').trim();
@@ -2054,8 +2019,11 @@ function analyzeFaltas(rows, header) {
     const faltasRaw  = row[cF];
     const diasOrig   = parseFaltasDias(faltasRaw);
     if (!diasOrig.length) continue;
+    if (diasOrig.some(day => !validDate(_faltasAnio, _faltasMes, day))) throw new Error('El listado contiene días que no existen en el periodo seleccionado.');
 
     const tarjetaKey = tarjetaRaw.replace(/^0+/, '') || '0';
+    if (seenCards.has(tarjetaKey)) throw new Error('El listado contiene tarjetas repetidas. Consolida las filas antes de analizar.');
+    seenCards.add(tarjetaKey);
     const dbEntry    = tarjetaMap.get(tarjetaKey);
 
     if (!dbEntry) {
@@ -2066,12 +2034,12 @@ function analyzeFaltas(rows, header) {
     const { rfc, persona } = dbEntry;
     const nombreDB   = normNombreSimple(persona.nombre || '');
     const nombreFalt = normNombreSimple(nombreRaw);
-    const nameOk     = nombreDB.length < 4 || nombreFalt.length < 4 || nombreDB.includes(nombreFalt.slice(0, 6)) || nombreFalt.includes(nombreDB.slice(0, 6));
+    const nameOk = nombreDB.length >= 4 && nombreFalt.length >= 4 && normNameForMatch(nombreDB).split(' ').sort().join(' ') === normNameForMatch(nombreFalt).split(' ').sort().join(' ');
     const { servicio, turno } = getPersonaServicioTurno(persona);
 
     const justificaciones = [], noJustificados = [];
     for (const diaNum of diasOrig) {
-      const cob = checkCoberturaFalta(persona, diaNum);
+      const cob = nameOk ? checkCoberturaFalta(persona, diaNum) : null;
       if (cob) justificaciones.push({ dia: diaNum, ...cob });
       else     noJustificados.push(diaNum);
     }
@@ -2139,29 +2107,28 @@ function openFaltasPanel() {
   rp.classList.add('on');
 
   const mesOpts = MESES_FAC.map((m,i) => `<option value="${i+1}"${i+1===_faltasMes?'selected':''}>${m}</option>`).join('');
-  const backBtn = cur ? `<button class="btn sec" onclick="pick('${esc(cur)}')">← Volver a persona</button>` : '';
+  const backBtn = cur ? `<button class="btn sec" data-person="${esc(cur)}">← Volver a persona</button>` : '';
   rp.innerHTML = `<div class="faltas-wrap">
     <div class="adv-head">
       <div class="adv-title">
         <h2 id="faltasPanelTitulo">Análisis de Faltas — ${MESES_FAC[_faltasMes-1]} ${_faltasAnio}</h2>
-        <p>Se carga automáticamente desde Google Sheets. El sistema detecta el mes del contenido y cruza con facilidades, LCGS y licencias médicas activas ese día.</p>
+        <p>Sube el listado de asistencia. El sistema detecta el periodo y cruza las faltas con facilidades, LCGS y licencias médicas. Los datos se procesan en este navegador.</p>
       </div>
       <div class="adv-actions">
         ${backBtn}
-        <button class="btn" onclick="cargarFaltasDesdeGoogleSheets()">🔄 Actualizar desde Google Sheets</button>
-        <button class="btn sec" onclick="document.getElementById('faltasFile').click()">📂 Subir Excel manual</button>
-        <input type="file" id="faltasFile" accept=".xlsx" style="display:none" onchange="handleFaltasFile(this)">
+        <button class="btn sec" data-click="chooseFaltasFile">📂 Subir Excel manual</button>
+        <input type="file" id="faltasFile" accept=".xlsx" style="display:none" data-change="handleFaltasFile">
       </div>
     </div>
     <div style="display:flex;gap:10px;align-items:center;padding:10px 0 4px;flex-wrap:wrap">
       <label style="font-size:14px;color:var(--tx2);font-family:'IBM Plex Mono',monospace">Mes de análisis:</label>
-      <select id="faltasMesSel" style="font-size:14px;padding:5px 8px;border:1px solid var(--brd);border-radius:7px;background:var(--sur)" onchange="_faltasMes=parseInt(this.value);_sinNadaCache=null;document.getElementById('faltasPanelTitulo').textContent='Análisis de Faltas — '+MESES_FAC[_faltasMes-1]+' '+_faltasAnio">${mesOpts}</select>
-      <input type="number" id="faltasAnioInput" value="${_faltasAnio}" min="2020" max="2035" style="width:72px;font-size:14px;padding:5px 8px;border:1px solid var(--brd);border-radius:7px;background:var(--sur)" onchange="_faltasAnio=parseInt(this.value)||${_faltasAnio};_sinNadaCache=null;document.getElementById('faltasPanelTitulo').textContent='Análisis de Faltas — '+MESES_FAC[_faltasMes-1]+' '+_faltasAnio">
+      <select id="faltasMesSel" style="font-size:14px;padding:5px 8px;border:1px solid var(--brd);border-radius:7px;background:var(--sur)" data-change="changeFaltasMonth">${mesOpts}</select>
+      <input type="number" id="faltasAnioInput" value="${_faltasAnio}" min="2020" max="2035" style="width:72px;font-size:14px;padding:5px 8px;border:1px solid var(--brd);border-radius:7px;background:var(--sur)" data-change="changeFaltasYear">
     </div>
-    <div id="faltasDropzone" class="faltas-drop" onclick="document.getElementById('faltasFile').click()">
+    <div id="faltasDropzone" class="faltas-drop" role="button" tabindex="0" aria-label="Seleccionar Excel de faltas" data-click="chooseFaltasFile">
       <div class="faltas-drop-ico">📋</div>
-      <div class="faltas-drop-txt">Haz clic o arrastra aquí el archivo Excel (opcional)</div>
-      <div class="faltas-drop-sub">Por defecto se toma directo de Google Sheets — esto es solo si quieres usar otro archivo</div>
+      <div class="faltas-drop-txt">Selecciona o arrastra el listado de asistencia</div>
+      <div class="faltas-drop-sub">Archivo .xlsx · Hasta 20 MB · Procesamiento local</div>
     </div>
     <div id="faltasResult"></div>
   </div>`;
@@ -2176,8 +2143,7 @@ function openFaltasPanel() {
     if (file) processFaltasFile(file);
   });
 
-  // Carga automática desde Google Sheets al abrir el panel.
-  cargarFaltasDesdeGoogleSheets();
+  // La carga del listado es local para mantener privados los datos de personal.
 }
 
 async function handleFaltasFile(input) {
@@ -2186,39 +2152,31 @@ async function handleFaltasFile(input) {
   input.value = '';
 }
 
-/* URL de exportación del Google Sheet que sustituye a la subida manual del
-   Excel de faltas. Debe estar compartido como "Cualquiera con el enlace
-   puede ver" para que el navegador pueda descargarlo directamente. */
-const FALTAS_GSHEET_ID  = '1v7PKYiurrs-wDcT0Iy2xwSOOH2WrMn3H0ZZYCHjEHCE';
-const FALTAS_GSHEET_URL = `https://docs.google.com/spreadsheets/d/${FALTAS_GSHEET_ID}/export?format=xlsx`;
-
-async function cargarFaltasDesdeGoogleSheets() {
-  const res = document.getElementById('faltasResult');
-  if (!res) return;
-  res.innerHTML = `<div class="empty-adv"><div class="spinner" style="margin:0 auto 8px"></div>Descargando faltas desde Google Sheets…</div>`;
-  try {
-    const resp = await fetch(FALTAS_GSHEET_URL);
-    if (!resp.ok) throw new Error(`No se pudo descargar (HTTP ${resp.status}). ¿El Sheet sigue compartido como "Cualquiera con el enlace puede ver"?`);
-    const data = await resp.arrayBuffer();
-    await processFaltasData(data, 'Faltas (Google Sheets)');
-  } catch (e) {
-    res.innerHTML = `<div class="empty-adv" style="color:#e05252">Error al descargar desde Google Sheets: ${esc(e.message)}<br><br>Puedes subir el Excel manualmente mientras tanto.</div>`;
-    console.error(e);
-  }
-}
 
 async function processFaltasFile(file) {
-  await processFaltasData(await file.arrayBuffer(), file.name);
-}
-
-async function processFaltasData(data, fileName) {
   const res = document.getElementById('faltasResult');
   if (!res) return;
+  const isCurrent = beginImport(res);
+  _faltasAnalysis = null;
+  _sinNadaCache = null;
+  res.replaceChildren();
+  try {
+    const data = await readExcelFile(file);
+    if (isCurrent()) await processFaltasData(data, file.name, isCurrent);
+  } catch (e) { if (isCurrent()) showToast(e.message, 'err'); }
+}
+
+async function processFaltasData(data, fileName, isCurrent = null) {
+  const res = document.getElementById('faltasResult');
+  if (!res) return;
+  isCurrent = isCurrent || beginImport(res);
   if (!window.XLSX) { res.innerHTML = `<div class="empty-adv" style="color:#e05252">SheetJS no cargó. Revisa la conexión a internet.</div>`; return; }
   res.innerHTML = `<div class="empty-adv"><div class="spinner" style="margin:0 auto 8px"></div>Procesando ${esc(fileName)}…</div>`;
-  _sinNadaCache = null; // reset cache for new file
+  _sinNadaCache = null;
+  _faltasAnalysis = null;
   try {
-    const wb = XLSX.read(data, { type: 'array' });
+    const wb = await readWorkbook(data, { type: 'array' });
+    if (!isCurrent()) return;
 
     // Busca la primera hoja con datos reales que tenga encabezado
     // TARJETA/NOMBRE/FALTAS — igual que hace Python con los archivos
@@ -2227,7 +2185,7 @@ async function processFaltasData(data, fileName) {
     let sheetName = null, header = null, rows = null;
     for (const name of wb.SheetNames) {
       const candidateRows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: null });
-      if (candidateRows.length <= 5) continue; // hojas vacías tipo "Hoja1"
+      if (candidateRows.length < 2) continue; // hojas vacías tipo "Hoja1"
       const found = findFaltasHeaderInSheet(candidateRows);
       if (found) { sheetName = name; header = found; rows = candidateRows; break; }
     }
@@ -2257,6 +2215,7 @@ async function processFaltasData(data, fileName) {
     renderFaltasResultado(analysis);
     showToast(`Análisis completado · ${analysis.results.length} personas · hoja "${sheetName}"`);
   } catch(e) {
+    if (!isCurrent()) return;
     res.innerHTML = `<div class="empty-adv" style="color:#e05252">Error al leer el archivo: ${esc(e.message)}</div>`;
     console.error(e);
   }
@@ -2317,10 +2276,10 @@ function renderFaltasResultado(analysis) {
       <div class="adv-card-h">
         <h3>Filtros</h3>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn" onclick="downloadCorregidas()">⬇ Faltas corregidas</button>
-          <button class="btn sec" onclick="downloadReporteJustificaciones()">📄 Justificaciones</button>
-          <button class="btn sec" onclick="downloadReporteSinNada()">📄 Sin cobertura</button>
-          <button class="btn sec" onclick="genPDFFaltas()">🖨 PDF</button>
+          <button class="btn" data-click="downloadCorregidas">⬇ Faltas corregidas</button>
+          <button class="btn sec" data-click="downloadReporteJustificaciones">📄 Justificaciones</button>
+          <button class="btn sec" data-click="downloadReporteSinNada">📄 Sin cobertura</button>
+          <button class="btn sec" data-click="genPDFFaltas">🖨 PDF</button>
         </div>
       </div>
       <div class="faltas-filters">
@@ -2376,15 +2335,15 @@ function renderFaltasResultado(analysis) {
           <div class="adv-field adv-field-wide">
             <label>Base de código de puesto (opcional — RFC → código, hoja "HORARIOS")</label>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-              <button class="btn sec" onclick="document.getElementById('constanciaBaseCodigoFile').click()">📂 Subir base de código</button>
-              <input type="file" id="constanciaBaseCodigoFile" accept=".xlsx" style="display:none" onchange="handleConstanciaBaseCodigoFile(this)">
+              <button class="btn sec" data-click="chooseCodigoFile">📂 Subir base de código</button>
+              <input type="file" id="constanciaBaseCodigoFile" accept=".xlsx" style="display:none" data-change="handleConstanciaBaseCodigoFile">
               <span id="constanciaBaseCodigoEstado" style="font-size:13px;color:var(--tx3)">Sin cargar — la columna CÓDIGO saldrá en blanco</span>
             </div>
           </div>
         </div>
         <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap">
-          <button class="btn big" onclick="generarConstanciaGlobalXLSX()">⬇ Generar Constancia Global (.xlsx)</button>
-          <button class="btn sec" onclick="downloadConstanciaPack()">⬇ Solo listado + config.json (para Python)</button>
+          <button class="btn big" data-click="generarConstanciaGlobalXLSX">⬇ Generar Constancia Global (.xlsx)</button>
+          <button class="btn sec" data-click="downloadConstanciaPack">⬇ Solo listado + config.json (para Python)</button>
         </div>
       </div>
     </div>
@@ -2520,12 +2479,13 @@ function buildFaltasCorregidasRows() {
 
   const out = [];
   rows.forEach((row, idx) => {
+    if (idx < header.headerRowIdx) { out.push(row ? [...row] : []); return; }
     if (idx === header.headerRowIdx) { out.push(row ? [...row, 'R.F.C.'] : ['R.F.C.']); return; }
     if (!row || row[cT] == null) { out.push(row ? [...row] : []); return; }
     const tarjeta = String(row[cT] ?? '').trim().replace(/^0+/, '') || '0';
     if (tarjetasIncluidas && !tarjetasIncluidas.has(tarjeta)) return; // fuera del filtro activo
     const justified = justMap.get(tarjeta);
-    const diasOrig   = parseFaltasDias(row[cF]);
+    const diasOrig = parseFaltasDias(row[cF]);
     const diasLeft   = justified && justified.size ? diasOrig.filter(d => !justified.has(d)) : diasOrig;
     const newRow     = [...row];
     newRow[cF]       = diasLeft.length ? diasLeft.join(', ') : null;
@@ -2741,6 +2701,7 @@ function parseValesBaseUltVale(rows) {
     const categoria= String(r[7]??'').trim();
     const v25 = r[9]  && !String(r[9]).startsWith('=')  ? String(r[9]).trim()  : null;
     const v26 = r[12] && !String(r[12]).startsWith('=') ? String(r[12]).trim() : null;
+    if (map.has(tarjeta)) throw new Error('BASE VALES contiene tarjetas duplicadas. Revisa el listado.');
     if (tarjeta) map.set(tarjeta, { lastVale: parseLastVale(v25,v26), categoria });
   }
   return map;
@@ -2757,6 +2718,7 @@ function buildPersonasFromDB() {
           const tarjeta = guessTarjeta(rec);
           if (!tarjeta || tarjeta==='—') continue;
           const tKey = String(tarjeta).trim().replace(/^0+/,'')||'0';
+          if (!buildTarjetaMap().get(tKey)) continue;
           if (!seen.has(tKey)) {
             const servicio = isSrcFac(src) ? (String(rec['SERVICIO']||'').trim()||'—') : '—';
             const turno    = isSrcFac(src) ? normTurno(String(rec['TURNO']||'').trim()) : '—';
@@ -2785,18 +2747,23 @@ function buildPersonasFromDB() {
 
 /* ─── Parseo FALTAS Excel ─── */
 function parseFaltasParaVales(rows) {
-  // Misma estructura: rows[1]=headers, rows[2+]=data
+  const header = findFaltasHeaderInSheet(rows);
+  if (!header) throw new Error('No se encontraron columnas TARJETA, NOMBRE y FALTAS.');
+  const detected = detectMesAnioFromRows(rows);
+  if ((detected.mes && detected.mes !== _valesEvalM) || (detected.anio && detected.anio !== _valesEvalY)) throw new Error('El listado de faltas corresponde a otro periodo.');
   const map = new Map();
-  const dataRows = rows.slice(2).filter(r=>r && r[1]!=null);
+  const dataRows = rows.slice(header.headerRowIdx + 1).filter(r => r && r[header.col.tarjeta] != null);
+  const c = header.col;
   for (const r of dataRows) {
-    const tarjeta = String(r[1]??'').trim().replace(/^0+/,'')||'0';
-    const dias    = parseFaltasDias(r[3]);
-    const oe      = r[4]!=null && String(r[4]).trim() && String(r[4]).trim()!=='0' ? String(r[4]).trim() : null;
-    const os      = r[5]!=null && String(r[5]).trim() && String(r[5]).trim()!=='0' ? String(r[5]).trim() : null;
-    const rm      = r[6]!=null && String(r[6]).trim() && String(r[6]).trim()!=='0' ? String(r[6]).trim() : null;
-    const rma     = r[7]!=null && String(r[7]).trim() && String(r[7]).trim()!=='0' ? String(r[7]).trim() : null;
-    if (dias.length || oe || os || rm || rma)
-      map.set(tarjeta, { dias, oe, os, rm, rma, nombre: String(r[2]??'').trim() });
+    const tarjeta = String(r[c.tarjeta]??'').trim().replace(/^0+/,'')||'0';
+    if (map.has(tarjeta)) throw new Error('El listado de faltas contiene tarjetas duplicadas.');
+    const dias    = parseFaltasDias(r[c.faltas]);
+    const oe      = r[c.faltas + 1]!=null && String(r[c.faltas + 1]).trim() && String(r[c.faltas + 1]).trim()!=='0' ? String(r[c.faltas + 1]).trim() : null;
+    const os      = r[c.faltas + 2]!=null && String(r[c.faltas + 2]).trim() && String(r[c.faltas + 2]).trim()!=='0' ? String(r[c.faltas + 2]).trim() : null;
+    const rm      = r[c.faltas + 3]!=null && String(r[c.faltas + 3]).trim() && String(r[c.faltas + 3]).trim()!=='0' ? String(r[c.faltas + 3]).trim() : null;
+    const rma     = r[c.faltas + 4]!=null && String(r[c.faltas + 4]).trim() && String(r[c.faltas + 4]).trim()!=='0' ? String(r[c.faltas + 4]).trim() : null;
+    if (dias.some(day => !validDate(_valesEvalY, _valesEvalM, day))) throw new Error('El listado contiene días inexistentes en el periodo.');
+      map.set(tarjeta, { dias, oe, os, rm, rma, nombre: String(r[c.nombre]??'').trim() });
   }
   return map;
 }
@@ -2851,12 +2818,12 @@ function getPersonaLicMedMes(persona, year, month) {
         const d=String(rec['D']||'').trim(), m=String(rec['M']||'').trim(), aR=String(rec['A']||'').trim();
         if (!d||!m||!aR) continue;
         const yr  = aR.length<=2 ? 2000+parseInt(aR,10) : parseInt(aR,10);
-        const start= new Date(yr, parseInt(m,10)-1, parseInt(d,10));
-        if (isNaN(start.getTime())) continue;
+        const start = validDate(yr, m, d);
+        if (!start) continue;
         const d2=String(rec['D_2']||d).trim(), m2=String(rec['M_2']||m).trim(), a2R=String(rec['A_2']||aR).trim();
         const yr2  = a2R.length<=2 ? 2000+parseInt(a2R,10) : parseInt(a2R,10);
-        const end  = new Date(yr2, parseInt(m2,10)-1, parseInt(d2,10));
-        if (start<=mEnd && end>=mStart)
+        const end = validDate(yr2, m2, d2);
+        if (end && end >= start && start<=mEnd && end>=mStart)
           found.push({ inicio:`${d}/${m}/${yr}`, termino:`${d2}/${m2}/${yr2}`, diagnostico: String(rec['Diagnostico']||rec['# d?as']||'').trim(), dias: guessDias(rec) });
       }
     }
@@ -2881,8 +2848,10 @@ function getServicioFromDB(persona) {
 /* ─── Cálculo de elegibilidad ─── */
 function runValesAnalysis() {
   if (!DB) { showToast('Base de datos no cargada aún', 'warn'); return; }
+  if (!validDate(_valesEvalY, _valesEvalM, 1)) { showToast('El periodo de evaluación no es válido.', 'err'); return; }
   const mesNombre = Object.keys(MES_NUM).find(k=>MES_NUM[k]===_valesEvalM) || '';
 
+  if (!_valesUltVale || !_valesFaltasMap) { showToast('Carga BASE VALES y FALTAS del periodo para evaluar todas las reglas.', 'warn'); return; }
   // Lista de personas desde data.json
   const personas = buildPersonasFromDB();
 
@@ -2900,6 +2869,8 @@ function runValesAnalysis() {
   _valesResults = personas.map(p => {
     const persona= DB[p.rfc] || null;
     const motivos= [];
+    if (!_valesUltVale.has(p.tarjetaKey)) motivos.push({ tipo: 'SIN_BASE', icon: '!', desc: 'Sin coincidencia en BASE VALES. Requiere revisión.' });
+
     const detalle= {};
 
     // 1. Vale reciente (< 6 meses) — solo si se cargó BASE VALES
@@ -2922,7 +2893,7 @@ function runValesAnalysis() {
       if (licMed.length) { detalle.licencias=licMed; motivos.push({ tipo:'LIC_MED', icon:'🏥', desc:`Lic. médica: ${licMed.map(l=>l.inicio+'–'+l.termino+(l.diagnostico?' ('+l.diagnostico.slice(0,30)+'...)':'')).join(', ')}` }); }
     }
 
-    // 5. Faltas del mes (archivo subido — opcional)
+    // 5. Faltas del mes del archivo validado
     if (_valesFaltasMap) {
       const fi = _valesFaltasMap.get(p.tarjetaKey);
       if (fi) {
@@ -2957,12 +2928,14 @@ function openValesPanel() {
   document.getElementById('em').style.display = 'none';
   rp.classList.add('on'); rp.scrollTop = 0;
 
-  const hoy = new Date();
-  _valesEvalY = hoy.getFullYear();
-  _valesEvalM = hoy.getMonth() + 1;
+  _valesResults = null;
+  _valesUltVale = null;
+  _valesFaltasMap = null;
+  _valesNombresFilter = null;
+  _valesNombresNoMatch = [];
 
   const mesOpts = Object.keys(MES_NUM).map(m=>`<option value="${MES_NUM[m]}"${MES_NUM[m]===_valesEvalM?'selected':''}>${m}</option>`).join('');
-  const backBtn = cur ? `<button class="btn sec" onclick="pick('${esc(cur)}')">← Persona</button>` : '';
+  const backBtn = cur ? `<button class="btn sec" data-person="${esc(cur)}">← Persona</button>` : '';
 
   rp.innerHTML = `<div class="vales-wrap" id="valesWrap">
     <div class="adv-head">
@@ -2970,7 +2943,7 @@ function openValesPanel() {
         <h2>🎫 Evaluador de Vales</h2>
         <p>
           <b>Fuente de incidencias:</b> los 3 Excel (facilidades, LCGS, licencias médicas) ya cargados en el sistema.<br>
-          <b>BASE VALES</b> (opcional) — solo para saber cuándo fue el último vale. <b>FALTAS</b> (opcional) — faltas y omisiones del mes.
+          <b>BASE VALES</b> (opcional) — solo para saber cuándo fue el último vale. <b>FALTAS</b> (requerida) — faltas y omisiones del mes.
         </p>
       </div>
       <div class="adv-actions">${backBtn}</div>
@@ -2983,30 +2956,30 @@ function openValesPanel() {
         <div class="vconf-field">
           <label>Mes de evaluación</label>
           <div class="vconf-row">
-            <select id="vEvalMes" onchange="_valesEvalM=parseInt(this.value)">${mesOpts}</select>
-            <input type="number" id="vEvalAnio" value="${_valesEvalY}" min="2020" max="2030" style="width:80px" onchange="_valesEvalY=parseInt(this.value)||${_valesEvalY}">
+            <select id="vEvalMes" data-change="changeValesMonth">${mesOpts}</select>
+            <input type="number" id="vEvalAnio" value="${_valesEvalY}" min="2020" max="2030" style="width:80px" data-change="changeValesYear">
           </div>
         </div>
         <div class="vconf-field">
-          <label>BASE VALES <span class="vconf-opt">(opcional · solo para regla 6 meses)</span><br><span id="vBaseSt" class="vconf-st">— no cargada</span></label>
-          <button class="btn sec" onclick="document.getElementById('valesBaseFile').click()">📂 Subir BASE VALES</button>
-          <input type="file" id="valesBaseFile" accept=".xlsx" style="display:none" onchange="handleValesBaseUpload(this)">
+          <label>BASE VALES <span class="vconf-opt">(requerida · regla de 6 meses)</span><br><span id="vBaseSt" class="vconf-st">— no cargada</span></label>
+          <button class="btn sec" data-click="chooseValesBase">📂 Subir BASE VALES</button>
+          <input type="file" id="valesBaseFile" accept=".xlsx" style="display:none" data-change="handleValesBaseUpload">
         </div>
         <div class="vconf-field">
-          <label>FALTAS del mes <span id="vFaltasSt" class="vconf-st">— no cargada (opcional)</span></label>
-          <button class="btn sec" onclick="document.getElementById('valesFaltasFile').click()">📂 Subir FALTAS</button>
-          <input type="file" id="valesFaltasFile" accept=".xlsx" style="display:none" onchange="handleValesFaltasUpload(this)">
+          <label>FALTAS del mes <span id="vFaltasSt" class="vconf-st">— no cargada (requerida)</span></label>
+          <button class="btn sec" data-click="chooseValesFaltas">📂 Subir FALTAS</button>
+          <input type="file" id="valesFaltasFile" accept=".xlsx" style="display:none" data-change="handleValesFaltasUpload">
         </div>
         <div class="vconf-field">
           <label>Lista de nombres <span class="vconf-opt">(opcional · filtra por lista del área)</span><br><span id="vNombresSt" class="vconf-st">— no cargada</span></label>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <button class="btn sec" onclick="document.getElementById('valesNombresFile').click()">📋 Subir lista de nombres</button>
-            <button class="btn sec" style="color:var(--tx3)" onclick="_valesNombresFilter=null;_valesNombresNoMatch=[];document.getElementById('vNombresSt').textContent='— no cargada';document.getElementById('vNombresSt').style.color='';if(_valesResults)renderValesResultados()">✕ Quitar filtro</button>
+            <button class="btn sec" data-click="chooseValesNombres">📋 Subir lista de nombres</button>
+            <button class="btn sec" style="color:var(--tx3)" data-click="clearNamesFilter">✕ Quitar filtro</button>
           </div>
-          <input type="file" id="valesNombresFile" accept=".xlsx" style="display:none" onchange="handleValesNombresUpload(this)">
+          <input type="file" id="valesNombresFile" accept=".xlsx" style="display:none" data-change="handleValesNombresUpload">
         </div>
         <div class="vconf-field vconf-run">
-          <button class="btn" id="vRunBtn" onclick="runValesAnalysis()">▶ Calcular elegibilidad</button>
+          <button class="btn" id="vRunBtn" data-click="runValesAnalysis">▶ Calcular elegibilidad</button>
           <div style="font-size:12px;color:var(--tx3);margin-top:4px">La base viene de los 3 Excel (data.json)</div>
         </div>
       </div>
@@ -3018,18 +2991,28 @@ function openValesPanel() {
 
 async function handleValesBaseUpload(input) {
   const f = input.files[0]; if (!f) return; input.value='';
+  _valesUltVale = null;
   document.getElementById('vBaseSt').textContent = '⏳ cargando…';
+  const importStatus = document.getElementById('vBaseSt');
+  if (!importStatus) return;
+  const isCurrent = beginImport(importStatus);
   try {
-    const data = await f.arrayBuffer();
-    const wb   = XLSX.read(data, {type:'array', cellDates:true});
+    _valesResults = null;
+    document.getElementById('valesResult').replaceChildren();
+    const data = await readExcelFile(f);
+    const wb   = await readWorkbook(data, {type:'array', cellDates:true});
+    if (!isCurrent()) return;
     if (!wb.Sheets['VALES']) throw new Error('No encontré la hoja "VALES"');
     const rows = XLSX.utils.sheet_to_json(wb.Sheets['VALES'], {header:1, defval:null, raw:true});
-    _valesUltVale = parseValesBaseUltVale(rows);
+    const parsed = parseValesBaseUltVale(rows);
+    if (!parsed.size) throw new Error('BASE VALES no contiene registros en el formato esperado.');
+    _valesUltVale = parsed;
     const conVale = Array.from(_valesUltVale.values()).filter(v=>v.lastVale).length;
     document.getElementById('vBaseSt').textContent = `✓ ${_valesUltVale.size} personas · ${conVale} con vale previo`;
     document.getElementById('vBaseSt').style.color = 'var(--acc2)';
     showToast(`BASE VALES cargada · ${conVale} personas con vale previo`);
   } catch(e) {
+    if (!isCurrent()) return;
     document.getElementById('vBaseSt').textContent = `✗ ${e.message}`;
     document.getElementById('vBaseSt').style.color = '#e05252';
   }
@@ -3037,10 +3020,17 @@ async function handleValesBaseUpload(input) {
 
 async function handleValesFaltasUpload(input) {
   const f = input.files[0]; if (!f) return; input.value='';
+  _valesFaltasMap = null;
   document.getElementById('vFaltasSt').textContent = '⏳ cargando…';
+  const importStatus = document.getElementById('vFaltasSt');
+  if (!importStatus) return;
+  const isCurrent = beginImport(importStatus);
   try {
-    const data = await f.arrayBuffer();
-    const wb   = XLSX.read(data, {type:'array'});
+    _valesResults = null;
+    document.getElementById('valesResult').replaceChildren();
+    const data = await readExcelFile(f);
+    const wb   = await readWorkbook(data, {type:'array'});
+    if (!isCurrent()) return;
     const sheetName = wb.SheetNames.find(n=>n.toUpperCase().includes('FALT')) || wb.SheetNames[0];
     const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, defval:null});
     _valesFaltasMap = parseFaltasParaVales(rows);
@@ -3049,6 +3039,7 @@ async function handleValesFaltasUpload(input) {
     document.getElementById('vFaltasSt').style.color = 'var(--acc2)';
     showToast(`FALTAS cargadas · ${cnt} personas`);
   } catch(e) {
+    if (!isCurrent()) return;
     document.getElementById('vFaltasSt').textContent = `✗ ${e.message}`;
     document.getElementById('vFaltasSt').style.color = '#e05252';
   }
@@ -3113,10 +3104,10 @@ function renderValesResultados() {
         <div class="adv-field"><label>📊 Ordenar por</label><select id="vSort"><option value="estado">Estado (elegibles primero)</option><option value="nombre">Nombre A→Z</option><option value="tarjeta">Tarjeta</option><option value="categoria">Categoría</option><option value="incidencias">Más incidencias</option></select></div>
       </div>
       <div style="padding:0 14px 12px;display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn sec" onclick="clearValesFiltros()">↺ Limpiar filtros</button>
-        <button class="btn sec" onclick="downloadValesElegibles()">⬇ Excel elegibles</button>
-        <button class="btn sec" onclick="downloadValesCompleto()">⬇ Excel completo</button>
-        <button class="btn" onclick="downloadValesPDFEncargado()">🖨 PDF para encargado</button>
+        <button class="btn sec" data-click="clearValesFiltros">↺ Limpiar filtros</button>
+        <button class="btn sec" data-click="downloadValesElegibles">⬇ Excel elegibles</button>
+        <button class="btn sec" data-click="downloadValesCompleto">⬇ Excel completo</button>
+        <button class="btn" data-click="downloadValesPDFEncargado">🖨 PDF para encargado</button>
       </div>
     </div>
 
@@ -3225,7 +3216,7 @@ function renderValesTabla(R) {
         const motHtml = p.motivos.length
           ? p.motivos.map(m=>`<div class="vmotivo">${m.icon} ${esc(m.desc)}</div>`).join('')
           : `<div class="vmotivo vmotivo-ok">✓ Sin observaciones</div>`;
-        return `<tr class="vrow-${p.estado.toLowerCase()} vrow-clickable${sel?' vrow-sel':''}" onclick="selectValesPerson('${esc(p.tarjetaKey)}')">
+        return `<tr class="vrow-${p.estado.toLowerCase()} vrow-clickable${sel?' vrow-sel':''}" data-vale="${esc(p.tarjetaKey)}" tabindex="0" role="button" aria-label="Ver detalle de ${esc(p.nombre)}">
           <td>${ESTADO_HTML[p.estado]||''}</td>
           <td class="mono acc">${esc(p.tarjeta)}</td>
           <td class="mono" style="font-size:12px">${esc(p.rfcDB)}</td>
@@ -3250,7 +3241,7 @@ function selectValesPerson(tarjetaKey) {
   // Mark selected row
   document.querySelectorAll('.vrow-clickable').forEach(r => r.classList.remove('vrow-sel'));
   document.querySelectorAll(`.vrow-clickable`).forEach(r => {
-    if (r.onclick?.toString().includes(`'${tarjetaKey}'`)) r.classList.add('vrow-sel');
+    if (r.dataset.vale === tarjetaKey) r.classList.add('vrow-sel');
   });
 
   const det = document.getElementById('valesDetalle'); if (!det) return;
@@ -3277,11 +3268,11 @@ function selectValesPerson(tarjetaKey) {
     if (f.rma) incHtml += `<div class="vdet-inc"><span class="vdet-ico">🟠</span><div><b>Retardo mayor</b><br>${esc(f.rma)}</div></div>`;
   }
   if (persona.detalle.facilidades?.length) {
-    incHtml += `<div class="vdet-inc"><span class="vdet-ico">📅</span><div><b>Facilidades administrativas</b><br>Días: ${persona.detalle.facilidades.join(', ')}</div></div>`;
+    incHtml += `<div class="vdet-inc"><span class="vdet-ico">📅</span><div><b>Facilidades administrativas</b><br>Días: ${esc(persona.detalle.facilidades.join(', '))}</div></div>`;
   }
   if (persona.detalle.lcgs?.length) {
     persona.detalle.lcgs.forEach(l => {
-      incHtml += `<div class="vdet-inc"><span class="vdet-ico">📋</span><div><b>Licencia con goce de sueldo</b><br>${esc(l.inicio)} – ${esc(l.termino)}${l.dias&&l.dias!=='—'?' ('+l.dias+' días)':''}</div></div>`;
+      incHtml += `<div class="vdet-inc"><span class="vdet-ico">📋</span><div><b>Licencia con goce de sueldo</b><br>${esc(l.inicio)} – ${esc(l.termino)}${l.dias&&l.dias!=='—'?' ('+esc(l.dias)+' días)':''}</div></div>`;
     });
   }
   if (persona.detalle.licencias?.length) {
@@ -3296,7 +3287,7 @@ function selectValesPerson(tarjetaKey) {
   if (!incHtml) incHtml = `<div class="vdet-ok-msg">✓ No se detectaron incidencias en ${Object.keys(MES_NUM).find(k=>MES_NUM[k]===_valesEvalM)} ${_valesEvalY}.</div>`;
 
   det.innerHTML = `<div class="vdet-header">
-    <button class="vdet-close" onclick="closeValesDetalle()">✕</button>
+    <button class="vdet-close" data-click="closeValesDetalle">✕</button>
     <div class="av" style="width:42px;height:42px;font-size:16px;border-radius:10px;flex-shrink:0">${esc(getIni(persona.nombre))}</div>
     <div style="flex:1;min-width:0">
       <div class="pi-nom" style="font-size:18px">${esc(fmtNombre(persona.nombre))}</div>
@@ -3314,7 +3305,7 @@ function selectValesPerson(tarjetaKey) {
     ${incHtml}
   </div>
   ${persona.rfcDB&&persona.rfcDB!=='—'?`<div class="vdet-section">
-    <button class="btn sec" style="width:100%;margin-top:4px" onclick="pick('${esc(persona.rfcDB)}');showToast('Abriendo ficha…')">📋 Ver ficha completa en BD</button>
+    <button class="btn sec" style="width:100%;margin-top:4px" data-person="${esc(persona.rfcDB)}">📋 Ver ficha completa en BD</button>
   </div>`:''}`;
 }
 
@@ -3352,9 +3343,13 @@ async function handleValesNombresUpload(input) {
   const f = input.files[0]; if (!f) return; input.value = '';
   const st = document.getElementById('vNombresSt');
   if (st) { st.textContent = '⏳ procesando…'; st.style.color = ''; }
+  const importStatus = document.getElementById('vNombresSt');
+  if (!importStatus) return;
+  const isCurrent = beginImport(importStatus);
   try {
-    const data = await f.arrayBuffer();
-    const wb   = XLSX.read(data, { type: 'array' });
+    const data = await readExcelFile(f);
+    const wb   = await readWorkbook(data, { type: 'array' });
+    if (!isCurrent()) return;
     const sheet = wb.Sheets[wb.SheetNames[0]];
     const rows  = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
 
@@ -3409,6 +3404,7 @@ async function handleValesNombresUpload(input) {
     // Si ya hay resultados calculados, re-renderizar con el filtro
     if (_valesResults) renderValesResultados();
   } catch(e) {
+    if (!isCurrent()) return;
     if (st) { st.textContent = `✗ ${e.message}`; st.style.color = '#e05252'; }
     console.error(e);
   }

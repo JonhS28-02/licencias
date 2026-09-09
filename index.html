@@ -3,14 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#163c35">
+  <meta name="theme-color" content="#722f43">
   <title>Gestión de Personal — Hospital de la Mujer</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex, nofollow">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://cdn.sheetjs.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <a class="skip-link" href="#si">Ir a la búsqueda</a>
   <header class="app-header">
     <div class="brand" aria-label="Identidad del sistema">
       <div class="logo" aria-hidden="true">HM</div>
@@ -20,7 +21,7 @@
       </div>
     </div>
     <div class="header-context" aria-label="Estado de las fuentes de información">
-      <span class="sync-status"><span class="status-dot"></span> Base consolidada</span>
+      <span class="sync-status"><span class="status-dot"></span> <span data-load-status>Cargando información…</span></span>
       <div class="hdr-stats">
         <div class="pill"><b id="sp">—</b><span>personas</span></div>
         <div class="pill"><b id="sr">—</b><span>registros</span></div>
@@ -30,16 +31,16 @@
   </header>
 
   <nav class="toolbar" aria-label="Módulos principales">
-    <button class="module-nav active" type="button" onclick="resetWorkspace()" aria-current="page">
+    <button class="module-nav active" type="button" data-click="resetWorkspace" aria-current="page">
       <span class="nav-icon" aria-hidden="true">⌕</span><span><b>Consulta integral</b><small>Trabajadores e históricos</small></span>
     </button>
-    <button class="module-nav" type="button" onclick="openFaltasPanel()">
+    <button class="module-nav" type="button" data-click="openFaltasPanel">
       <span class="nav-icon" aria-hidden="true">✓</span><span><b>Validación de faltas</b><small>Cruce de incidencias</small></span>
     </button>
-    <button class="module-nav" type="button" onclick="openReporteFacilidadesAvanzado('facilidades')">
+    <button class="module-nav" type="button" data-click="openReporteFacilidadesAvanzado">
       <span class="nav-icon" aria-hidden="true">▤</span><span><b>Reportes</b><small>Licencias y facilidades</small></span>
     </button>
-    <button class="module-nav" type="button" onclick="openValesPanel()">
+    <button class="module-nav" type="button" data-click="openValesPanel">
       <span class="nav-icon" aria-hidden="true">◇</span><span><b>Vales</b><small>Análisis de elegibilidad</small></span>
     </button>
   </nav>
@@ -54,7 +55,7 @@
         <label class="slbl" for="si">Nombre, RFC o número de tarjeta</label>
         <div class="sw" id="sw">
           <span class="s-ico" aria-hidden="true">⌕</span>
-          <input type="search" class="si" id="si" placeholder="Escribe al menos 2 caracteres" autocomplete="off" spellcheck="false" aria-autocomplete="list" aria-controls="ac" aria-expanded="false">
+          <input type="search" class="si" id="si" placeholder="Escribe al menos 2 caracteres" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-controls="ac" aria-expanded="false">
           <button class="s-clr" id="sc" type="button" aria-label="Limpiar búsqueda">×</button>
           <div class="ac" id="ac" role="listbox"></div>
         </div>
@@ -65,39 +66,41 @@
         <div id="rl" class="recent-list"></div>
         <div class="recent-empty">Los trabajadores consultados aparecerán aquí para volver rápidamente a su expediente.</div>
       </div>
-      <div class="sidebar-foot"><span class="status-dot"></span><span>Datos listos para consulta</span></div>
+      <div class="sidebar-foot"><span class="status-dot"></span><span><span data-load-status>Cargando información…</span></span></div>
     </aside>
 
-    <section class="right" aria-label="Área de trabajo" aria-live="polite">
-      <div class="loading" id="ld">
+    <section class="right" aria-label="Área de trabajo">
+      <div class="loading" id="ld" role="status">
         <div class="spinner" aria-hidden="true"></div>
         <div><strong>Preparando información</strong><span>Cargando y relacionando fuentes…</span></div>
       </div>
       <div class="empty" id="em">
         <div class="empty-panel">
-          <div class="empty-kicker">Consulta integral de personal</div>
-          <h2>Encuentra el contexto completo de un trabajador</h2>
-          <p>Busca por nombre, RFC o tarjeta para revisar licencias médicas, LCGS, facilidades administrativas e históricos en un solo lugar.</p>
-          <button class="btn" type="button" onclick="document.getElementById('si').focus()">Buscar trabajador</button>
-          <div class="workflow" aria-label="Flujo de consulta">
-            <span><b>1</b> Buscar</span><i></i><span><b>2</b> Revisar incidencias</span><i></i><span><b>3</b> Validar contexto</span>
-          </div>
+          <div class="empty-kicker">Hospital de la Mujer · Recursos humanos</div>
+          <h2>Cada persona,<br>su historia completa.</h2>
+          <p>Licencias, facilidades y asistencia. La información que necesitas para resolver el día, en un mismo expediente.</p>
+          <button class="btn" type="button" data-click="focusSearch">Consultar un expediente <span aria-hidden="true">↗</span></button>
+          <div class="welcome-note">Archivo de personal <span>Consulta · Revisión · Reportes</span></div>
         </div>
+        <div class="process-heading">Tu mesa de trabajo <span>Elige un proceso para comenzar</span></div>
         <div class="capability-grid" aria-label="Procesos disponibles">
-          <button type="button" onclick="openFaltasPanel()"><span>Validación de faltas</span><small>Detecta coberturas y faltas sin justificar</small><b>Ir al módulo →</b></button>
-          <button type="button" onclick="openReporteFacilidadesAvanzado('facilidades')"><span>Reportes consolidados</span><small>Filtra licencias, LCGS y facilidades</small><b>Consultar →</b></button>
-          <button type="button" onclick="openValesPanel()"><span>Análisis de vales</span><small>Cruza incidencias y elegibilidad</small><b>Analizar →</b></button>
+          <button type="button" data-click="openFaltasPanel"><span class="process-number">01</span><span>Revisar faltas</span><small>Detecta coberturas y faltas sin justificar</small><b>Ir al módulo →</b></button>
+          <button type="button" data-click="openReporteFacilidadesAvanzado"><span class="process-number">02</span><span>Preparar reportes</span><small>Filtra licencias, LCGS y facilidades</small><b>Consultar →</b></button>
+          <button type="button" data-click="openValesPanel"><span class="process-number">03</span><span>Evaluar vales</span><small>Cruza incidencias y elegibilidad</small><b>Analizar →</b></button>
         </div>
       </div>
       <div class="rp" id="rp"></div>
     </section>
   </main>
+  <noscript>Activa JavaScript para consultar los expedientes.</noscript>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/4.2.1/jspdf.umd.min.js" integrity="sha384-qovJwSBbRDPP5cEjCp8S0UP66wrvnjaa60XMOGzTNanrThcrGfXfnZkvgY8N1KT3" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/5.0.8/jspdf.plugin.autotable.min.js" integrity="sha384-5jk55M0XWoAw7LyhlXJe19ErOr3doBAPzxw9vahPFbvolqWa2yDk4fhHa2zuYeOa" crossorigin="anonymous"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js" integrity="sha384-Pqp51FUN2/qzfxZxBCtF0stpc9ONI6MYZpVqmo8m20SoaQCzf+arZvACkLkirlPz" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous"></script>
+  <script src="eventos.js"></script>
+  <script src="seguridad.js"></script>
   <script src="cs.js"></script>
   <script src="constancia.js"></script>
 </body>

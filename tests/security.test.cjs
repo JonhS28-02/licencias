@@ -1,0 +1,47 @@
+'use strict';
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const path = require('node:path');
+const root = path.join(__dirname, '..');
+const context = vm.createContext({ document: { addEventListener() {} }, Blob, console, setTimeout });
+vm.runInContext(fs.readFileSync(path.join(root, 'seguridad.js'), 'utf8'), context);
+vm.runInContext(fs.readFileSync(path.join(root, 'cs.js'), 'utf8').replace(/loadData\(\);\s*$/, ''), context);
+const run = code => vm.runInContext(code, context);
+assert.equal(run("parseDateDMY('31/02/2026')"), null);
+assert.equal(run("parseDateDMY('29/02/2025')"), null);
+assert.equal(run("parseDateDMY('29/02/2024').getDate()"), 29);
+assert.equal(run("parseDateDMY('2026-09-09T00:00:00').getDate()"), 9);
+assert.equal(run("fmtTime('1899-12-30T08:30:00')"), '08:30');
+assert.equal(run("csvCell('=1+1')"), '"\'=1+1"');
+assert.equal(run("csvCell('  @SUM(A1)')"), '"\'  @SUM(A1)"');
+assert.equal(run("esc(\"'<>\\\"&\")"), '&#39;&lt;&gt;&quot;&amp;');
+assert.throws(() => run('validateDatabase([])'));
+assert.throws(() => run("validateDatabase({A:{nombre:'Prueba',fuentes:{X:{H:[null]}}}})"));
+assert.equal(run("Object.keys(validateDatabase({})).length"), 0);
+assert.equal(run("JSON.stringify(parseFaltasDias('1, 3-5, 10/12, 1'))"), '[1,3,4,5,10,11,12]');
+assert.throws(() => run("parseFaltasDias('5texto')"));
+assert.throws(() => run("parseFaltasDias('32')"));
+assert.equal(run("licMedDateRange({D:31,M:2,A:2026})"), null);
+run("DB=validateDatabase({A:{nombre:'José Prueba',fuentes:{Facilidades:{H:[{TARJETA:'001'}]}}},B:{nombre:'Otra Prueba',fuentes:{Facilidades:{H:[{TARJETA:'1'}]}}}}); _tarjetaMap=null;");
+assert.equal(run("buildTarjetaMap().get('1')"), null);
+assert.equal(run("searchDB('JOSE',10)[0].rfc"), 'A');
+assert.equal(run("buildPersonasFromDB().length"), 0);
+console.log('OK: fechas, CSV, HTML, estructura, faltas, búsqueda y tarjetas ambiguas.');
+// El HTML generado no debe recuperar atributos de eventos ejecutables.
+for (const file of ['index.html', 'cs.js']) {
+  assert.doesNotMatch(fs.readFileSync(path.join(root, file), 'utf8'), /\bon(?:click|change|error|load)\s*=\s*["']/);
+}
+run('_valesEvalM=9; _valesEvalY=2026;');
+assert.equal(run("parseFaltasParaVales([['SEPTIEMBRE 2026'],['TARJETA','NOMBRE','FALTAS'],['123','Ejemplo','2,3']]).get('123').dias.length"),2);
+assert.throws(()=>run("parseFaltasParaVales([['AGOSTO 2026'],['TARJETA','NOMBRE','FALTAS'],['123','Ejemplo','2']])"));
+assert.throws(()=>run("parseFaltasParaVales([['SEPTIEMBRE 2026'],['TARJETA','NOMBRE','FALTAS'],['123','Ejemplo','2'],['123','Ejemplo','3']])"));
+console.log('OK: CSP sin eventos inline, encabezados, periodos y duplicados de importación.');
+run('globalThis.importOwner = {isConnected:true}; globalThis.firstImport=beginImport(importOwner); globalThis.secondImport=beginImport(importOwner);');
+assert.equal(run('firstImport()'), false);
+assert.equal(run('secondImport()'), true);
+run('cancelImport(importOwner)');
+assert.equal(run('secondImport()'), false);
+run('globalThis.lastImport=beginImport(importOwner); importOwner.isConnected=false;');
+assert.equal(run('lastImport()'), false);
+console.log('OK: importaciones obsoletas, canceladas y vistas desconectadas.');
